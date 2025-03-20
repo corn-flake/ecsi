@@ -3,6 +3,7 @@
 
 #include "chunk.h"
 #include "value.h"
+#include "table.h"
 
 typedef struct {
   Chunk* chunk;
@@ -10,6 +11,8 @@ typedef struct {
   Value* stack;
   int stackCapacity;
   Value* stackTop;
+  Obj* objects;
+  Table strings;
 } VM;
 
 typedef enum {
@@ -17,6 +20,8 @@ typedef enum {
   INTERPRET_COMPILE_ERROR,
   INTERPRET_RUNTIME_ERROR,
 } InterpretResult;
+
+extern VM vm;
 
 void initVM();
 void freeVM();

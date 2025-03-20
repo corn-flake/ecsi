@@ -1,4 +1,7 @@
-CFLAGS := -Wall -Wextra -fanalyzer -g
+CFLAGS := -Wall -Wextra -fanalyzer -g 
 
-clox: main.c memory.c debug.c chunk.c
-	gcc main.c compiler.c scanner.c memory.c line_number.c vm.c value.c debug.c chunk.c ${CFLAGS} -o clox
+clox: chunk.c compiler.c debug.c line_number.c main.c memory.c object.c scanner.c table.c value.c vm.c
+	gcc chunk.c compiler.c debug.c line_number.c main.c memory.c object.c scanner.c table.c value.c vm.c ${CFLAGS} -o clox
+
+clean:
+	rm clox
