@@ -1,0 +1,135 @@
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "character_type_tests.h"
+#include "hexadecimal.h"
+#include "identifier.h"
+#include "scanner.h"
+
+static void
+subsequents ()
+{
+  while (is_subsequent (peek ()))
+    advance ();
+}
+
+static void
+dot_subsequent ()
+{
+  if (!is_dot_subsequent (peek ()))
+    error_token ("Expected a dot subsequent.");
+
+  advance ();
+}
+
+static void
+sign_subsequent ()
+{
+  if (!is_sign_subsequent (peek ()))
+    error_token ("Expected a sign subsequent.");
+
+  advance ();
+}
+
+Token
+peculiar_identifier (IdentifierVariant variant)
+{
+  if (variant == IDENTIFIER_PECULIAR_STARTS_WITH_DOT)
+    dot_subsequent ();
+
+  // The identifier is only one explicit sign, like '+'.
+  if (!is_sign_subsequent (peek ()) && peek () != '.')
+    return make_token (TOKEN_IDENTIFIER);
+
+  if (is_sign_subsequent (peek ()))
+    {
+      // Read the sign subsequent.
+      sign_subsequent ();
+      subsequents ();
+      return make_token (TOKEN_IDENTIFIER);
+    }
+
+  if (peek () == '.')
+    {
+      dot_subsequent ();
+      subsequents ();
+      return make_token (TOKEN_IDENTIFIER);
+    }
+
+  // Unreached.
+  fprintf (stderr, "Should not reach here in peculiar_identifier.\n");
+  assert (false);
+}
+
+static bool
+at_mnemonic_escape ()
+{
+  if (peek () != '\\')
+    return false;
+
+  switch (peek_next ())
+    {
+    case 'a':
+    case 'b':
+    case 't':
+    case 'n':
+    case 'r':
+      return true;
+    default:
+      return false;
+    }
+}
+
+static void
+mnemonic_escape ()
+{
+  advance ();
+  advance ();
+}
+
+static bool
+at_inline_hex_escape ()
+{
+  return !(peek () == '\\' && peek_next () == 'x');
+}
+
+static void
+symbol_element ()
+{
+  if (peek () != '|' && peek () != '\\')
+    {
+      advance ();
+      return;
+    }
+
+  if (at_inline_hex_escape ())
+    {
+      inline_hex_escape ();
+      return;
+    }
+
+  if (at_mnemonic_escape ())
+    {
+      mnemonic_escape ();
+      return;
+    }
+}
+
+Token
+identifier (IdentifierVariant variant)
+{
+  if (variant == IDENTIFIER_STARTS_WITH_VERTICAL_LINE)
+    {
+      while (peek () != '|')
+        symbol_element ();
+      advance ();
+      return make_token (TOKEN_IDENTIFIER);
+    }
+
+  while (is_subsequent (peek ()))
+    advance ();
+
+  return make_token (TOKEN_IDENTIFIER);
+}

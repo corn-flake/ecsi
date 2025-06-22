@@ -1,0 +1,21 @@
+#include "hexadecimal.h"
+
+#include "character_type_tests.h"
+#include "scanner.h"
+
+void hex_scalar_value() {
+  while (isHexDigit(peek())) {
+    advance();
+  }
+}
+
+void inline_hex_escape() {
+  advance();
+  advance();
+
+  hex_scalar_value();
+
+  if (!match(';')) {
+    errorToken("Expect ';' after hex digits in inline hex escape.");
+  }
+}

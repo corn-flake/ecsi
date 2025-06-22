@@ -1,5 +1,4 @@
-#ifndef clox_line_number_h
-#define clox_line_number_h
+#pragma once
 
 typedef struct {
   int lineNumber;
@@ -9,11 +8,11 @@ typedef struct {
 typedef struct {
   int count;
   int capacity;
-  LineNumber* lineNumbers;
+  LineNumber *lineNumbers;
 } LineNumberArray;
 
-void initLineNumberArray(LineNumberArray* array);
-void freeLineNumberArray(LineNumberArray* array);
-void writeNumber(LineNumberArray* array, int lineNumber);
-
-#endif
+void initLineNumberArray(LineNumberArray *array);
+void freeLineNumberArray(LineNumberArray *array);
+int writeNumber(LineNumberArray *array, int lineNumber);
+int *decompressLineNumberArray(LineNumberArray *array);
+int numberOfEntries(LineNumberArray *array);

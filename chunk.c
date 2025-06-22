@@ -1,9 +1,12 @@
+#include "chunk.h"
+
+#include <assert.h>
 #include <stdlib.h>
 
-#include "chunk.h"
 #include "line_number.h"
 #include "memory.h"
 #include "value.h"
+#include "vm.h"
 
 void initChunk(Chunk *chunk) {
   chunk->count = 0;
@@ -22,7 +25,7 @@ void writeChunk(Chunk *chunk, uint8_t byte, int line) {
   }
 
   chunk->code[chunk->count] = byte;
-  writeNumber(&chunk->lines, line);
+  assert(line == writeNumber(&chunk->lines, line));
   chunk->count++;
 }
 
@@ -34,21 +37,27 @@ void freeChunk(Chunk *chunk) {
 }
 
 int addConstant(Chunk *chunk, Value value) {
+  push(value);
   writeValueArray(&chunk->constants, value);
+  pop();
   return chunk->constants.count - 1;
 }
 
 int getLine(Chunk *chunk, int offset) {
-  int currOffset = 0;
-  int currLineIndex = 0;
-  while (currOffset < offset && currLineIndex < chunk->lines.count) {
-    if (chunk->lines.lineNumbers[currLineIndex].repeats >= offset + 1) {
-      return chunk->lines.lineNumbers[currLineIndex].lineNumber;
+  int counter = 0;
+  int entryIndex = 0;
+  int entriesCount = numberOfEntries(&chunk->lines);
+
+  for (entryIndex = 0; entryIndex < entriesCount; entryIndex++) {
+    LineNumber currentEntry = chunk->lines.lineNumbers[entryIndex];
+    if (counter + currentEntry.repeats >= offset) {
+      return currentEntry.lineNumber;
+    } else {
+      counter += currentEntry.repeats;
     }
-    currOffset += chunk->lines.lineNumbers[currLineIndex].repeats;
-    currLineIndex++;
   }
-  return chunk->lines.lineNumbers[currLineIndex].lineNumber;
+
+  return chunk->lines.lineNumbers[entryIndex].lineNumber;
 }
 
 void writeConstant(Chunk *chunk, Value value, int line) {

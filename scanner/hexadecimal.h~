@@ -1,0 +1,4 @@
+#pragma once
+
+void inline_hex_escape ();
+void hex_scalar_value ();
