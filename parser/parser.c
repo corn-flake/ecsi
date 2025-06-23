@@ -12,6 +12,7 @@
 #include "../vm.h"
 #include "derived_expressions.h"
 #include "literals.h"
+#include "parser.h"
 #include "token_to_type.h"
 
 static inline size_t min(size_t a, size_t b) { return a < b ? a : b; }
@@ -85,16 +86,22 @@ Value parseDatum();
 Value parseList(bool parseDatums) {
   if (check(TOKEN_RIGHT_PAREN)) return NIL_VAL;
 
-  ObjPair *list =
-      newPair(parseDatums ? parseDatum() : parseExpression(), NIL_VAL);
+  Value firstElement = parseDatums ? parseDatum() : parseExpression();
+
+  push(firstElement);
+  ObjPair *list = newPair(firstElement, NIL_VAL);
+  pop();  // firstElement
+
   push(OBJ_VAL(list));
   while (!check(TOKEN_RIGHT_PAREN)) {
     append(list, parseDatums ? parseDatum() : parseExpression());
   }
   pop();  // list
+
   return OBJ_VAL(list);
 }
 
+/*
 static void addToAst(Value value) {
   assert(IS_NIL(parser.ast) || IS_PAIR(parser.ast));
   push(value);
@@ -105,6 +112,7 @@ static void addToAst(Value value) {
   }
   pop();  // value
 }
+*/
 
 Value parseDatum() {
   Value value = NIL_VAL;
@@ -157,8 +165,6 @@ Value parseDatum() {
     default:
       value = NIL_VAL;
   }
-
-  addToAst(value);
 
   return value;
 }
@@ -378,7 +384,6 @@ Value parseExpression() {
       // Identifiers
     case TOKEN_IDENTIFIER:
       value = symbol();
-      parserAdvance();
       break;
 
     case TOKEN_LEFT_PAREN:
@@ -389,8 +394,6 @@ Value parseExpression() {
       fprintf(stderr, "TODO: parse %s tokens.\n",
               tokenTypeToString(parser.current->type));
   }
-
-  addToAst(value);
 
   return value;
 }

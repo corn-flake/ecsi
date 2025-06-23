@@ -1,6 +1,6 @@
-DEBUG_ASAN_FLAGS := -Wall -Wextra -Wpedantic -fanalyzer -g -fsanitize=address 
-DEBUG_NO_ASAN_FLAGS := -Wall -Wextra -Wpedantic -fanalyzer -g
-RELEASE_FLAGS := -Wall -Wextra -Wpedantic -fanalyzer -O3 
+DEBUG_ASAN_FLAGS := -Wall -Wextra -Wpedantic -fanalyzer -g3 -fsanitize=address
+DEBUG_NO_ASAN_FLAGS := -Wall -Wextra -Wpedantic -fanalyzer -g3
+RELEASE_FLAGS := -Wall -Wextra -Wpedantic -fanalyzer -O3
 EXEC_NAME := lisp_compiler
 CORE_C_FILES := chunk.c compiler.c debug.c line_number.c main.c memory.c object.c table.c value.c vm.c
 SCANNER_C_FILES := scanner/scanner.c scanner/character_type_tests.c scanner/hexadecimal.c scanner/identifier.c scanner/intertoken_space.c scanner/pound_something.c scanner/scan_booleans.c

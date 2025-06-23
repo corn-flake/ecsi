@@ -102,7 +102,12 @@ typedef struct {
   Value *values;
 } ValueArray;
 
+// Test if two values are equal.
+// Does not trigger the GC.
 bool valuesEqual(Value a, Value b);
+
+// Print a value.
+// Does not trigger the GC.
 void printValue(Value value);
 
 void initValueArray(ValueArray *array);

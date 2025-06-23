@@ -167,6 +167,55 @@ static void printFunction(ObjFunction *function) {
   printf("<fn %s>", function->name->chars);
 }
 
+static bool isList(ObjPair *pair) {
+  while (IS_PAIR(pair->cdr)) {
+    pair = AS_PAIR(pair->cdr);
+  }
+  return IS_NIL(pair->cdr) ? true : false;
+}
+
+static void printList(ObjPair *list) {
+  while (!IS_NIL(list->cdr)) {
+    printValue(list->car);
+    putchar(' ');
+    list = AS_PAIR(list->cdr);
+  }
+  printValue(list->car);
+  putchar(')');
+}
+
+static void printPair(ObjPair *pair) {
+  if (IS_NIL(pair->cdr)) {
+    putchar('(');
+    printValue(pair->car);
+    putchar(')');
+    return;
+  }
+
+  if (!IS_PAIR(pair->cdr)) {
+    putchar('(');
+    printValue(pair->car);
+    printf("%s", " . ");
+    printValue(pair->cdr);
+    putchar(')');
+    return;
+  }
+
+  if (isList(AS_PAIR(pair->cdr))) {
+    putchar('(');
+    printValue(pair->car);
+    putchar(' ');
+    printList(AS_PAIR(pair->cdr));
+    return;
+  }
+
+  putchar('(');
+  printValue(pair->car);
+  putchar(' ');
+  printPair(AS_PAIR(pair->cdr));
+  putchar(')');
+}
+
 void printObject(Value value) {
   switch (OBJ_TYPE(value)) {
     case OBJ_CLOSURE:
@@ -185,18 +234,7 @@ void printObject(Value value) {
       break;
     }
     case OBJ_PAIR: {
-      putchar('(');
-      printValue(AS_PAIR(value)->car);
-      if (IS_PAIR((AS_PAIR(value)->cdr))) {
-        putchar(' ');
-        printValue(AS_PAIR(value)->cdr);
-      } else if (IS_NIL(AS_PAIR(value)->cdr)) {
-        putchar(')');
-      } else {
-        printf(" . ");
-        printValue(AS_PAIR(value)->cdr);
-        putchar(')');
-      }
+      printPair(AS_PAIR(value));
       break;
     }
     case OBJ_NATIVE:

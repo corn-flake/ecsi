@@ -558,8 +558,7 @@ ObjFunction *compile(const char *source) {
   }
 
   initParser(tokens);
-  parseExpression();
-  printValue(parser.ast);
+  printValue(parseExpression());
   puts("");
   freeTokenArray(&tokens);
 
