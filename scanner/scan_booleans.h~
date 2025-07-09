@@ -1,6 +1,0 @@
-#pragma once
-
-#include "scanner.h"
-
-Token scan_true ();
-Token scan_false ();

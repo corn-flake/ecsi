@@ -1,0 +1,15 @@
+#pragma once
+
+#include <stdbool.h>
+
+#include "../scanner.h"
+#include "../value.h"
+
+void parserAdvance();
+void errorAt(Token *token, const char *message);
+void error(const char *message);
+void errorAtCurrent(const char *message);
+void consume(TokenType type, const char *message);
+bool parserMatch(TokenType type);
+bool check(TokenType type);
+Value parseList(bool parseDatums);

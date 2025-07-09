@@ -1,20 +1,89 @@
-DEBUG_ASAN_FLAGS := -Wall -Wextra -Wpedantic -fanalyzer -g3 -fsanitize=address
-DEBUG_NO_ASAN_FLAGS := -Wall -Wextra -Wpedantic -fanalyzer -g3
-RELEASE_FLAGS := -Wall -Wextra -Wpedantic -fanalyzer -O3
-EXEC_NAME := lisp_compiler
-CORE_C_FILES := chunk.c compiler.c debug.c line_number.c main.c memory.c object.c table.c value.c vm.c
-SCANNER_C_FILES := scanner/scanner.c scanner/character_type_tests.c scanner/hexadecimal.c scanner/identifier.c scanner/intertoken_space.c scanner/pound_something.c scanner/scan_booleans.c
-PARSER_C_FILES := parser/parser.c parser/derived_expressions.c parser/token_to_type.c parser/literals.c
-CC := gcc
+ifeq ($(OS),Windows_NT)
+  ifeq ($(shell uname -s),) # not in a bash-like shell
+	CLEANUP = del /F /Q
+	MKDIR = mkdir
+  else # in a bash-like shell, like msys
+	CLEANUP = rm -f
+	MKDIR = mkdir -p
+  endif
+	TARGET_EXTENSION=exe
+else
+	CLEANUP = rm -f
+	MKDIR = mkdir -p
+	TARGET_EXTENSION=out
+endif
 
-lisp_compiler: ${CORE_C_FILES} ${SCANNER_C_FILES} ${PARSER_C_FILES}
-	${CC} ${CORE_C_FILES} ${SCANNER_C_FILES} ${PARSER_C_FILES} ${DEBUG_ASAN_FLAGS} -o ${EXEC_NAME}
+.PHONY: clean
+.PHONY: test
 
-gdb: ${CORE_C_FILES} ${SCANNER_C_FILES} ${PARSER_C_FILES}
-	${CC} ${CORE_C_FILES} ${SCANNER_C_FILES} ${PARSER_C_FILES} ${DEBUG_NO_ASAN_FLAGS} -o ${EXEC_NAME}_gdb
+UNITY_PATH = unity/src/
+SOURCE_PATH = src/
+TEST_PATH = test/
+BUILD_PATH = build/
+BUILD_DEPENDS_PATH = build/depends/
+BUILD_OBJ_PATH = build/objs/
+BUILD_RESULTS_PATH = build/results/
 
-release: ${CORE_C_FILES} ${SCANNER_C_FILES} ${PARSER_C_FILES}
-	${CC} ${CORE_C_FILES} ${SCANNER_C_FILES} ${PARSER_C_FILES} ${RELEASE_FLAGS} -o ${EXEC_NAME}_release
+BUILD_SOURCE_PATH = $(BUILD_PATH) $(BUILD_DEPENDS_PATH) $(BUILD_OBJ_PATH) $(BUILD_RESULTS_PATH)
+
+TEST_SOURCE = $(wildcard $(TEST_PATH)*.c)
+
+COMPILE=gcc -c
+LINK=gcc
+DEPEND=gcc -MM -MG -MF
+CFLAGS=-I. -I$(UNITY_PATH) -I$(SOURCE_PATH) -DTEST
+
+TEST_RESULTS = $(patsubst $(TEST_PATH)test_%.c,$(BUILD_RESULTS_PATH)test_%.txt,$(TEST_SOURCE))
+
+PASSED = `grep -s PASS $(BUILD_RESULTS_PATH)*.txt`
+FAIL = `grep -s FAIL $(BUILD_RESULTS_PATH)*.txt`
+IGNORE = `grep -s IGNORE $(BUILD_RESULTS_PATH)*.txt`
+
+test: $(BUILD_SOURCE_PATH) $(TEST_RESULTS)
+	@echo "-----------------------IGNORES:-----------------------"
+	@echo "$(IGNORE)"
+	@echo "-----------------------FAILURES:-----------------------"
+	@echo "$(FAIL)"
+	@echo "-----------------------PASSED:-----------------------"
+	@echo "$(PASSED)"
+	@echo "DONE"
+
+$(BUILD_RESULTS_PATH)%.txt: $(BUILD_PATH)%.$(TARGET_EXTENSION)
+	-./$< > $@ 2>&1
+
+$(BUILD_PATH)test_%.$(TARGET_EXTENSION): $(BUILD_OBJ_PATH)test_%.o $(BUILD_OBJ_PATH)%.o $(BUILD_OBJ_PATH)unity.o #$(BUILD_DEPENDS_PATH)test_%.d
+	$(LINK) -o $@ $^
+
+$(BUILD_OBJ_PATH)%.o:: $(TEST_PATH)%.c
+	$(COMPILE) $(CFLAGS) $< -o $@
+
+$(BUILD_OBJ_PATH)%.o:: $(SOURCE_PATH)%.c
+	$(COMPILE) $(CFLAGS) $< -o $@
+
+$(BUILD_OBJ_PATH)%.o:: $(UNITY_PATH)%.c $(UNITY_PATH)%.h
+	$(COMPILE) $(CFLAGS) $< -o $@
+
+$(BUILD_DEPENDS_PATH)%.d:: $(TEST_PATH)%.c
+	$(DEPEND) $@ $<
+
+$(BUILD_PATH):
+	$(MKDIR) $(BUILD_PATH)
+
+$(BUILD_DEPENDS_PATH):
+	$(MKDIR) $(BUILD_DEPENDS_PATH)
+
+$(BUILD_OBJ_PATH):
+	$(MKDIR) $(BUILD_OBJ_PATH)
+
+$(BUILD_RESULTS_PATH):
+	$(MKDIR) $(BUILD_RESULTS_PATH)
 
 clean:
-	rm ${EXEC_NAME} ${EXEC_NAME}_gdb
+	$(CLEANUP) $(BUILD_OBJ_PATH)*.o
+	$(CLEANUP) $(BUILD_PATH)*.$(TARGET_EXTENSION)
+	$(CLEANUP) $(BUILD_RESULTS_PATH)*.txt
+
+.PRECIOUS: $(BUILD_PATH)test_%.$(TARGET_EXTENSION)
+.PRECIOUS: $(BUILD_DEPENDS_PATH)%.d
+.PRECIOUS: $(BUILD_OBJ_PATH)%.o
+.PRECIOUS: $(BUILD_RESULTS_PATH)%.txt

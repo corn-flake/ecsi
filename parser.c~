@@ -1,0 +1,324 @@
+#include "parser.h"
+
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "memory.h"
+#include "object.h"
+#include "parser_internals/derived_expressions.h"
+#include "parser_internals/literals.h"
+#include "parser_internals/parser_operations.h"
+#include "parser_internals/token_to_type.h"
+#include "scanner.h"
+#include "value.h"
+#include "vm.h"
+
+static inline size_t min(size_t a, size_t b) { return a < b ? a : b; }
+
+Parser parser;
+
+void initParser(TokenArray tokens) {
+  parser.tokens = tokens;
+  parser.previous = tokens.array;
+  parser.current = tokens.array;
+  parser.hadError = false;
+  parser.panicMode = false;
+  parser.ast = NIL_VAL;
+}
+
+/*
+static void addToAst(Value value) {
+  assert(IS_NIL(parser.ast) || IS_PAIR(parser.ast));
+  push(value);
+  if (IS_NIL(parser.ast)) {
+    parser.ast = CONS(value, NIL_VAL);
+  } else {
+    append(AS_PAIR(parser.ast), value);
+  }
+  pop();  // value
+}
+*/
+
+Value parseDatum() {
+  Value value = NIL_VAL;
+
+  switch (parser.current->type) {
+      // Simple datums.
+    case TOKEN_BOOLEAN:
+      value = BOOL_VAL(booleanTokenToBool(parser.current));
+      parserAdvance();
+      break;
+    case TOKEN_NUMBER:
+      value = NUMBER_VAL(numberTokenToDouble(parser.current));
+      parserAdvance();
+      break;
+    case TOKEN_CHARACTER:
+      value = CHARACTER_VAL(characterTokenToChar(parser.current));
+      parserAdvance();
+      break;
+    case TOKEN_STRING:
+      value = OBJ_VAL(tokenToObjString(parser.current));
+      parserAdvance();
+      break;
+    case TOKEN_IDENTIFIER:
+      value = symbol();
+      parserAdvance();
+      break;
+    case TOKEN_POUND_U8_LEFT_PAREN:
+      value = bytevector();
+      break;
+
+      // Compound datums.
+    case TOKEN_LEFT_PAREN:
+      // Consume the '('
+      parserAdvance();
+      value = parseListOfDatums();
+      break;
+    case TOKEN_POUND_LEFT_PAREN:
+      // Consume the '#('
+      parserAdvance();
+      value = vector(true);
+      break;
+    case TOKEN_QUOTE:
+    case TOKEN_BACKQUOTE:
+    case TOKEN_COMMA:
+    case TOKEN_COMMA_AT:
+      parserAdvance();
+      value = parseDatum();
+      break;
+    default:
+      value = NIL_VAL;
+  }
+
+  return value;
+}
+
+void markParserRoots() { markValue(parser.ast); }
+
+static bool atLambda() {
+  return memcmp(parser.current->start, "lambda",
+                min(6, parser.current->length)) == 0;
+}
+
+static Value lambda_() {
+  Value lambdaSymbol = OBJ_VAL(newSymbol("lambda", 6));
+  push(lambdaSymbol);
+
+  // Consume the 'lambda'.
+  parserAdvance();
+
+  Value argList = NIL_VAL;
+
+  if (parserMatch(TOKEN_LEFT_PAREN)) {
+    while (!check(TOKEN_RIGHT_PAREN)) {
+      if (!check(TOKEN_IDENTIFIER)) {
+        errorAtCurrent("Expect identifier in argument list of lambda.");
+      }
+
+      Value sym = symbol();
+      push(sym);
+
+      if (!IS_PAIR(argList)) {
+        argList = CONS(sym, NIL_VAL);
+        pop();  // sym
+        push(argList);
+      } else {
+        append(AS_PAIR(argList), sym);
+        pop();  // sym
+      }
+    }
+  } else {
+    consume(TOKEN_IDENTIFIER,
+            "Expect argument list or argument variable after 'lambda'.");
+    argList = OBJ_VAL(tokenToObjString(parser.previous));
+    push(argList);
+  }
+
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' to finish lambda argument list.");
+
+  Value body = parseListOfExpressions();
+  push(body);
+
+  Value argListWrappedInPair = CONS(argList, NIL_VAL);
+  push(argListWrappedInPair);
+
+  Value lambdaAndArgs = CONS(lambdaSymbol, argListWrappedInPair);
+  pop();  // argListWrappedInPair
+  push(lambdaAndArgs);
+
+  Value bodyWrappedInPair = CONS(body, NIL_VAL);
+  push(bodyWrappedInPair);
+
+  SET_CDDR(lambdaAndArgs, bodyWrappedInPair);
+  pop();  // bodyWrappedInPair
+
+  Value lambdaExpression = CONS(lambdaAndArgs, NIL_VAL);
+
+  pop();  // lambdaArgsBody
+  pop();  // lambdaAndArgs
+  pop();  // body
+  pop();  // argList
+  pop();  // lambdaSymbol
+
+  return lambdaExpression;
+}
+
+static bool atConditional() {
+  return memcmp(parser.current->start, "if", min(2, parser.current->length)) ==
+         0;
+}
+
+static Value conditional() {
+  Value ifSymbol = OBJ_VAL(newSymbol("if", 2));
+  push(ifSymbol);
+
+  Value predicate = parseExpression();
+  push(predicate);
+
+  Value consequent = parseExpression();
+  push(consequent);
+
+  Value ifAndPred = CONS(ifSymbol, predicate);
+  push(ifAndPred);
+
+  Value ifPredConsq = CONS(ifAndPred, consequent);
+  push(ifPredConsq);
+
+  Value ifList = NIL_VAL;
+  if (parserMatch(TOKEN_RIGHT_PAREN)) {
+    ifList = CONS(ifPredConsq, NIL_VAL);
+    pop();  // ifPredConsq
+    pop();  // ifAndPred
+    pop();  // consequent
+    pop();  // predicate
+    pop();  // ifSymbol
+    return ifList;
+  }
+
+  Value alternate = parseExpression();
+  push(alternate);
+
+  Value ifPredConsqAlt = CONS(ifPredConsq, alternate);
+  push(ifPredConsqAlt);
+
+  ifList = CONS(ifPredConsqAlt, NIL_VAL);
+
+  pop();  // ifPredConsqAlt
+  pop();  // alternate
+  pop();  // ifPredConsq
+  pop();  // ifAndPred
+  pop();  // consequent
+  pop();  // predicate
+  pop();  // ifSymbol
+
+  return ifList;
+}
+
+static bool atAssignment() {
+  return memcmp(parser.current->start, "set!",
+                min(4, parser.current->length)) == 0;
+}
+
+static Value assignment() {
+  Value setSymbol = OBJ_VAL(newSymbol("set!", 4));
+  push(setSymbol);
+
+  // consume 'set!'
+  parserAdvance();
+
+  consume(TOKEN_IDENTIFIER, "Expect identifier after 'set!'");
+
+  Value target = OBJ_VAL(tokenToObjSymbol(parser.previous));
+  push(target);
+
+  Value value = parseExpression();
+  push(value);
+
+  Value setAndTarget = CONS(setSymbol, target);
+  push(setAndTarget);
+
+  Value setTargetValue = CONS(setAndTarget, value);
+  push(setTargetValue);
+
+  Value setExpression = CONS(setTargetValue, NIL_VAL);
+
+  pop();  // setTargetValue
+  pop();  // setAndTarget
+  pop();  // value
+  pop();  // target
+  pop();  // setSymbol
+
+  return setExpression;
+}
+
+static Value listBasedExpression() {
+  // Read the left paren
+  parserAdvance();
+
+  if (atLambda()) return lambda_();
+  if (atConditional()) return conditional();
+  if (atAssignment()) return assignment();
+
+  DerivedExpressionType derivedType = NOT_DERIVED_EXPR;
+
+  if ((derivedType = derivedExpressionType()) != NOT_DERIVED_EXPR) {
+    return derivedExpression(derivedType);
+  }
+
+  // Procedure call
+  return parseListOfExpressions();
+}
+
+Value parseExpression() {
+  Value value = NIL_VAL;
+
+  switch (parser.current->type) {
+    // Literals
+    // Self evaluating values
+    case TOKEN_BOOLEAN:
+      value = BOOL_VAL(booleanTokenToBool(parser.current));
+      parserAdvance();
+      break;
+    case TOKEN_NUMBER:
+      value = NUMBER_VAL(numberTokenToDouble(parser.current));
+      parserAdvance();
+      break;
+    case TOKEN_CHARACTER:
+      value = CHARACTER_VAL(characterTokenToChar(parser.current));
+      break;
+    case TOKEN_STRING:
+      value = OBJ_VAL(tokenToObjString(parser.current));
+      break;
+    case TOKEN_POUND_LEFT_PAREN:
+      value = vector(false);
+      break;
+    case TOKEN_POUND_U8_LEFT_PAREN:
+      value = bytevector();
+      break;
+
+      // Quotation
+    case TOKEN_QUOTE:
+      // Read the quote
+      parserAdvance();
+      value = parseDatum();
+      break;
+
+      // Identifiers
+    case TOKEN_IDENTIFIER:
+      value = symbol();
+      break;
+
+    case TOKEN_LEFT_PAREN:
+      value = listBasedExpression();
+      break;
+
+    default:
+      fprintf(stderr, "TODO: parse %s tokens.\n",
+              tokenTypeToString(parser.current->type));
+  }
+
+  return value;
+}
