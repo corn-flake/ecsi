@@ -1,10 +1,6 @@
 #include "../src/chunk.h"
 #include "../unity/src/unity.h"
 
-void setUp() {}
-
-void tearDown() {}
-
 void test_writeChunkGrow() {
   Chunk chunk;
   initChunk(&chunk);

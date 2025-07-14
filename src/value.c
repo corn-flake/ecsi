@@ -11,7 +11,6 @@
 static char *booleanToString(bool b);
 static char *doubleToString(double d);
 static char *longToString(long l);
-static char intToChar(int i);
 static size_t numberOfDigitsInLong(long l);
 static long fractionToWholeNumber(double fraction);
 static bool doubleIsWholeNumber(double d);
@@ -41,8 +40,7 @@ bool valuesEqual(Value a, Value b) {
 
 void initValueArray(ValueArray *array) {
   array->values = NULL;
-  array->capacity = 0;
-  array->count = 0;
+  array->capacity = array->count = 0;
 }
 
 void writeValueArray(ValueArray *array, Value value) {
@@ -53,8 +51,7 @@ void writeValueArray(ValueArray *array, Value value) {
         GROW_ARRAY(Value, array->values, oldCapacity, array->capacity);
   }
 
-  array->values[array->count] = value;
-  array->count++;
+  array->values[array->count++] = value;
 }
 
 void freeValueArray(ValueArray *array) {
@@ -78,7 +75,7 @@ char *valueToString(Value value) {
   if (IS_BOOL(value)) {
     return booleanToString(AS_BOOL(value));
   } else if (IS_NIL(value)) {
-    char *nilString = malloc(4);
+    char *nilString = checkedMalloc(4);
     memcpy(nilString, "nil", 3);
     nilString[3] = '\0';
     return nilString;
@@ -86,24 +83,30 @@ char *valueToString(Value value) {
     return doubleToString(AS_NUMBER(value));
   } else if (IS_OBJ(value)) {
     return objectToString(value);
+  } else {
+    return "";
   }
 #else
-  /*
   switch (value.type) {
     case VAL_BOOL:
-      printf(AS_BOOL(value) ? "true" : "false");
+      return booleanToString(AS_BOOL(value));
       break;
-    case VAL_NIL:
-      printf("nil");
+    case VAL_NIL: {
+      char *nilString = checkedMalloc(4);
+      memcpy(nilString, "nil", 3);
+      nilString[3] = '\0';
+      return nilString;
       break;
+    }
     case VAL_NUMBER:
-      printf("%g", AS_NUMBER(value));
+      return doubleToString(AS_NUMBER(value));
       break;
     case VAL_OBJ:
-      printObject(value);
+      return objectToString(value);
       break;
+    default:
+      return "";
   }
-  */
 #endif
 }
 
@@ -116,7 +119,7 @@ static char *doubleToString(double d) {
   size_t fractionalPartDigits = numberOfDigitsInLong(fractionalPartAsWhole);
 
   // Add 2 for the dot and the null terminator
-  char *string = malloc(integerPartDigits + fractionalPartDigits + 2);
+  char *string = checkedMalloc(integerPartDigits + fractionalPartDigits + 2);
   char *integerPartString = longToString(integerPart);
   char *fractionalPartString = longToString(fractionalPartAsWhole);
   char *positionInString = string;
@@ -138,18 +141,20 @@ static char *doubleToString(double d) {
 }
 
 static char *longToString(long l) {
+#define INTEGRAL_TO_CHAR(x) (char)(48 + x)
   size_t length = numberOfDigitsInLong(l);
-  char *string = malloc(length + 1);
-  char *digit = string;
-  for (int i = length - 1; i >= 0; i--) {
-    string[i] = intToChar(l % 10L);
+  char *string = checkedMalloc(length + 1);
+
+  size_t i = length - 1;
+  do {
+    string[i] = INTEGRAL_TO_CHAR(l % 10L);
     l /= 10L;
-  }
+  } while (i--);
+
   string[length] = '\0';
   return string;
+#undef INTEGRAL_TO_CHAR
 }
-
-static char intToChar(int i) { return (char)(48 + i); }
 
 static bool doubleIsWholeNumber(double d) { return d == (double)(long)d; }
 
@@ -165,11 +170,11 @@ static size_t numberOfDigitsInLong(long l) { return (size_t)ceil(log10(l)); }
 static char *booleanToString(bool b) {
   char *string = NULL;
   if (b) {
-    string = malloc(5);
+    string = ALLOCATE(char, 5);
     memcpy(string, "true", 4);
     string[4] = '\0';
   } else {
-    string = malloc(6);
+    string = ALLOCATE(char, 6);
     memcpy(string, "false", 5);
     string[5] = '\0';
   }

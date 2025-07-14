@@ -15,6 +15,24 @@
 #include "debug.h"
 #endif
 
+#define MEMORY_ALLOC_FAIL() exit(1)
+
+void *checkedMalloc(size_t size) {
+  void *memory = malloc(size);
+  if (NULL == memory) {
+    MEMORY_ALLOC_FAIL();
+  }
+  return memory;
+}
+
+void *checkedRealloc(void *ptr, size_t newSize) {
+  void *result = realloc(ptr, newSize);
+  if (result == NULL) {
+    MEMORY_ALLOC_FAIL();
+  }
+  return result;
+}
+
 #define GC_HEAP_GROW_FACTOR 2
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
@@ -34,9 +52,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     return NULL;
   }
 
-  void *result = realloc(pointer, newSize);
-  if (result == NULL) exit(1);
-  return result;
+  return checkedRealloc(pointer, newSize);
 }
 
 void markObject(Obj *object) {

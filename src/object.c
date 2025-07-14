@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "memory.h"
@@ -9,8 +10,20 @@
 #include "value.h"
 #include "vm.h"
 
+typedef struct {
+  size_t count;
+  size_t capacity;
+  char *string;
+} GrowableString;
+
+static void initGrowableString(GrowableString *gs);
+static void growableStringAppendChar(GrowableString *gs, char c);
+static void growableStringAppendString(GrowableString *gs, const char *s);
+
 static char *objStringToString(ObjString *string);
 static char *objPairToString(ObjPair *pair);
+static void objPairToStringInGrowableString(ObjPair *pair, GrowableString *gs);
+static char *listToString(ObjPair *list);
 static char *objClosureToString(ObjClosure *closure);
 static char *objNativeToString(NativeFn native);
 static char *objFunctionToString(ObjFunction *function);
@@ -25,6 +38,37 @@ static void printFunction(ObjFunction *function);
 static bool isList(ObjPair *pair);
 static void printList(ObjPair *pair);
 static void printPair(ObjPair *pair);
+
+static void initGrowableString(GrowableString *gs) {
+  gs->capacity = gs->count = 0;
+  gs->string = checkedMalloc(1);
+  *(gs->string) = '\0';
+}
+
+static void growableStringAppendChar(GrowableString *gs, char c) {
+  if (gs->capacity < gs->count + 1) {
+    size_t oldCapacity = gs->capacity;
+    gs->capacity = GROW_CAPACITY(oldCapacity);
+    char *newString = checkedMalloc(gs->capacity);
+    memcpy(newString, gs->string, gs->count);
+    gs->string = newString;
+  }
+
+  gs->string[gs->count] = c;
+  gs->string[gs->count + 1] = '\0';
+  gs->count++;
+}
+
+static void growableStringAppendString(GrowableString *gs, const char *s) {
+  for (; *s; s++) {
+    growableStringAppendChar(gs, *s);
+  }
+}
+
+static void growableStringFree(GrowableString *gs) {
+  free(gs->string);
+  initGrowableString(gs);
+}
 
 const char *objTypeToString(ObjType type) {
   switch (type) {
@@ -84,6 +128,110 @@ static char *objStringToString(ObjString *string) {
   return buffer;
 }
 
+static char *objPairToString(ObjPair *pair) {
+  GrowableString gs;
+  initGrowableString(&gs);
+  objPairToStringInGrowableString(pair, &gs);
+  return gs.string;
+}
+
+static void objPairToStringInGrowableString(ObjPair *pair, GrowableString *gs) {
+  if (IS_NIL(pair->cdr)) {
+    growableStringAppendChar(gs, '(');
+    char *carString = valueToString(pair->car);
+    growableStringAppendString(gs, carString);
+    free(carString);
+    growableStringAppendChar(gs, ')');
+    return;
+  }
+
+  if (!IS_PAIR(pair->cdr)) {
+    growableStringAppendChar(gs, '(');
+
+    char *carString = valueToString(pair->car);
+    growableStringAppendString(gs, carString);
+    free(carString);
+
+    growableStringAppendString(gs, " . ");
+
+    char *cdrString = valueToString(pair->cdr);
+    growableStringAppendString(gs, cdrString);
+    free(cdrString);
+
+    growableStringAppendChar(gs, ')');
+  }
+
+  if (isList(AS_PAIR(pair->cdr))) {
+    char *carString = valueToString(pair->car);
+    growableStringAppendString(gs, carString);
+    free(carString);
+
+    growableStringAppendChar(gs, ' ');
+
+    char *listString = listToString(AS_PAIR(pair->cdr));
+    growableStringAppendString(gs, listString);
+    free(listString);
+  }
+
+  char *carString = valueToString(pair->car);
+  growableStringAppendString(gs, carString);
+  free(carString);
+
+  growableStringAppendChar(gs, ' ');
+
+  char *cdrString = objPairToString(AS_PAIR(pair->cdr));
+  growableStringAppendString(gs, cdrString);
+  free(cdrString);
+
+  growableStringAppendChar(gs, ')');
+}
+
+static char *listToString(ObjPair *list) {
+  GrowableString gs;
+  initGrowableString(&gs);
+
+  while (!IS_NIL(list->cdr)) {
+    char *carString = valueToString(list->car);
+    growableStringAppendString(&gs, carString);
+    free(carString);
+    growableStringAppendChar(&gs, ' ');
+    list = AS_PAIR(list->cdr);
+  }
+
+  char *finalCarString = valueToString(list->car);
+  growableStringAppendString(&gs, finalCarString);
+  free(finalCarString);
+  growableStringAppendChar(&gs, ')');
+
+  return gs.string;
+}
+
+static char *objClosureToString(ObjClosure *closure) {
+  return objFunctionToString(closure->function);
+}
+
+static char *objNativeToString(NativeFn native) { return ""; }
+
+static char *objFunctionToString(ObjFunction *function) {
+  if (function->name == NULL) {
+    size_t scriptStringLength = 7;
+    char *scriptString = checkedMalloc(scriptStringLength + 1);
+    memcpy(scriptString, "script", scriptStringLength);
+    scriptString[scriptStringLength] = '\0';
+    return scriptString;
+  }
+
+  size_t bufferSize = function->name->length + 3;  // <fn > + null
+  char *buffer = checkedMalloc(bufferSize);
+  memcpy(buffer, "<fn", 3);
+  memcpy(buffer + 3, function->name->chars, function->name->length);
+  buffer[function->name->length + 3] = '>';
+  buffer[bufferSize - 1] = '\0';
+  return buffer;
+}
+
+static char *objUpvalueToString(ObjUpvalue *upvalue) { return ""; }
+
 static char *objSymbolToString(ObjSymbol *symbol) {
   size_t bufferSize = symbol->text->length + 2;  // single quote + null
   char *buffer = ALLOCATE(char, bufferSize);
@@ -93,27 +241,7 @@ static char *objSymbolToString(ObjSymbol *symbol) {
   return buffer;
 }
 
-static char *objClosureToString(ObjClosure *closure) {
-  return objFunctionToString(closure->function);
-}
-
-static char *objFunctionToString(ObjFunction *function) {
-  if (function->name == NULL) {
-    size_t scriptStringLength = 7;
-    char *scriptString = ALLOCATE(char, scriptStringLength + 1);
-    memcpy(scriptString, "script", scriptStringLength);
-    scriptString[scriptStringLength] = '\0';
-    return scriptString;
-  }
-
-  size_t bufferSize = function->name->length + 3;  // <fn > + null
-  char *buffer = ALLOCATE(char, bufferSize);
-  memcpy(buffer, "<fn", 3);
-  memcpy(buffer + 3, function->name->chars, function->name->length);
-  buffer[function->name->length + 3] = '>';
-  buffer[bufferSize - 1] = '\0';
-  return buffer;
-}
+static char *objVectorToString(ObjVector *vector) { return ""; }
 
 #define ALLOCATE_OBJ(type, objectType) \
   (type *)allocateObject(sizeof(type), objectType)
@@ -241,63 +369,6 @@ ObjSymbol *newSymbol(const char *chars, int length) {
   return symbol;
 }
 
-static void printFunction(ObjFunction *function) {
-  if (function->name == NULL) {
-    printf("<script>");
-    return;
-  }
-  printf("<fn %s>", function->name->chars);
-}
-
-static bool isList(ObjPair *pair) {
-  while (IS_PAIR(pair->cdr)) {
-    pair = AS_PAIR(pair->cdr);
-  }
-  return IS_NIL(pair->cdr) ? true : false;
-}
-
-static void printList(ObjPair *list) {
-  while (!IS_NIL(list->cdr)) {
-    printValue(list->car);
-    putchar(' ');
-    list = AS_PAIR(list->cdr);
-  }
-  printValue(list->car);
-  putchar(')');
-}
-
-static void printPair(ObjPair *pair) {
-  if (IS_NIL(pair->cdr)) {
-    putchar('(');
-    printValue(pair->car);
-    putchar(')');
-    return;
-  }
-
-  if (!IS_PAIR(pair->cdr)) {
-    putchar('(');
-    printValue(pair->car);
-    printf("%s", " . ");
-    printValue(pair->cdr);
-    putchar(')');
-    return;
-  }
-
-  if (isList(AS_PAIR(pair->cdr))) {
-    putchar('(');
-    printValue(pair->car);
-    putchar(' ');
-    printList(AS_PAIR(pair->cdr));
-    return;
-  }
-
-  putchar('(');
-  printValue(pair->car);
-  putchar(' ');
-  printPair(AS_PAIR(pair->cdr));
-  putchar(')');
-}
-
 void printObject(Value value) {
   switch (OBJ_TYPE(value)) {
     case OBJ_CLOSURE:
@@ -331,6 +402,61 @@ void printObject(Value value) {
       putchar(')');
       break;
   }
+}
+
+static void printFunction(ObjFunction *function) {
+  if (function->name == NULL) {
+    printf("<script>");
+    return;
+  }
+  printf("<fn %s>", function->name->chars);
+}
+
+static void printPair(ObjPair *pair) {
+  putchar('(');
+
+  if (IS_NIL(pair->cdr)) {
+    printValue(pair->car);
+    putchar(')');
+    return;
+  }
+
+  if (!IS_PAIR(pair->cdr)) {
+    printValue(pair->car);
+    printf("%s", " . ");
+    printValue(pair->cdr);
+    putchar(')');
+    return;
+  }
+
+  if (isList(AS_PAIR(pair->cdr))) {
+    printValue(pair->car);
+    putchar(' ');
+    printList(AS_PAIR(pair->cdr));
+    return;
+  }
+
+  printValue(pair->car);
+  putchar(' ');
+  printPair(AS_PAIR(pair->cdr));
+  putchar(')');
+}
+
+static bool isList(ObjPair *pair) {
+  while (IS_PAIR(pair->cdr)) {
+    pair = AS_PAIR(pair->cdr);
+  }
+  return IS_NIL(pair->cdr);
+}
+
+static void printList(ObjPair *list) {
+  while (!IS_NIL(list->cdr)) {
+    printValue(list->car);
+    putchar(' ');
+    list = AS_PAIR(list->cdr);
+  }
+  printValue(list->car);
+  putchar(')');
 }
 
 void append(ObjPair *pair, Value value) {
