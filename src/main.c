@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #include "chunk.h"
 #include "common.h"
@@ -8,16 +10,15 @@
 #include "vm.h"
 
 static void repl() {
-  char line[1024];
-  while (true) {
-    printf("> ");
-
-    if (!fgets(line, sizeof(line), stdin)) {
-      printf("\n");
-      break;
+  char *line = readline("> ");
+  while (line != NULL) {
+    // Only add non-empty lines to the history
+    if (*line) {
+      add_history(line);
     }
-
+    
     interpret(line);
+    line = readline("> ");
   }
 }
 
