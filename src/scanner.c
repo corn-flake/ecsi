@@ -1,6 +1,7 @@
 #include "scanner.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -99,7 +100,7 @@ void initScanner(const char *source) {
 }
 
 static Token number() {
-  while (isDigit(peek())) advance();
+  while (isdigit(peek())) advance();
 
   return makeToken(TOKEN_NUMBER);
 }
@@ -125,7 +126,7 @@ Token scanToken() {
 
   char c = advance();
 
-  if (isDigit(c)) return number();
+  if (isdigit(c)) return number();
 
   if (isInitial(c)) return identifier(IDENTIFIER_NO_VERTICAL_LINE);
 

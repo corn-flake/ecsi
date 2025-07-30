@@ -20,12 +20,10 @@ void test_writeChunkGrow() {
 }
 
 void test_addConstant() {
-  puts("hello from addConstant test");
   Chunk chunk;
   initChunk(&chunk);
 
   addConstant(&chunk, NIL_VAL);
-  puts("added constant");
   TEST_ASSERT(IS_NIL(chunk.constants.values[0]));
 }
 

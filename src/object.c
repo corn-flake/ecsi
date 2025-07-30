@@ -16,20 +16,25 @@ typedef struct {
   char *string;
 } GrowableString;
 
+/*
+  There is no growableStringFree function because growableStrings
+  are not currently intended to be freed. There are only used
+  internally in the objectToString functions, which are only for
+  interactive debugging.
+ */
 static void initGrowableString(GrowableString *gs);
 static void growableStringAppendChar(GrowableString *gs, char c);
 static void growableStringAppendString(GrowableString *gs, const char *s);
 
-static char *objStringToString(ObjString *string);
-static char *objPairToString(ObjPair *pair);
-static void objPairToStringInGrowableString(ObjPair *pair, GrowableString *gs);
-static char *listToString(ObjPair *list);
+static char *objStringToString(const ObjString *string);
+static char *objPairToString(const ObjPair *pair);
+static void objPairToStringInGrowableString(const ObjPair *pair,
+                                            GrowableString *gs);
+static char *listToString(const ObjPair *list);
 static char *objClosureToString(ObjClosure *closure);
-static char *objNativeToString(NativeFn native);
 static char *objFunctionToString(ObjFunction *function);
-static char *objUpvalueToString(ObjUpvalue *upvalue);
-static char *objSymbolToString(ObjSymbol *symbol);
-static char *objVectorToString(ObjVector *vector);
+static char *objSymbolToString(const ObjSymbol *symbol);
+static char *objVectorToString(const ObjVector *vector);
 
 static Obj *allocateObject(size_t size, ObjType type);
 static ObjString *allocateString(char *chars, int length, uint32_t hash);
@@ -63,11 +68,6 @@ static void growableStringAppendString(GrowableString *gs, const char *s) {
   for (; *s; s++) {
     growableStringAppendChar(gs, *s);
   }
-}
-
-static void growableStringFree(GrowableString *gs) {
-  free(gs->string);
-  initGrowableString(gs);
 }
 
 const char *objTypeToString(ObjType type) {
@@ -106,10 +106,20 @@ char *objectToString(Value value) {
       return objStringToString(AS_STRING(value));
     case OBJ_SYMBOL:
       return objSymbolToString(AS_SYMBOL(value));
-    case OBJ_NATIVE:
-      return objNativeToString(AS_NATIVE(value));
-    case OBJ_UPVALUE:
-      return objUpvalueToString(AS_UPVALUE(value));
+      // We heap-allocate OBJ_NATIVE and OBJ_UPVALUE because other functions
+      // expect them to be heap-allocated.
+    case OBJ_NATIVE: {
+      const size_t NATIVE_FN_LEN = 11;
+      char *nativeFnString = checkedMalloc(NATIVE_FN_LEN + 1);
+      memcpy(nativeFnString, "<native fn>", NATIVE_FN_LEN + 1);
+      return nativeFnString;
+    }
+    case OBJ_UPVALUE: {
+      const size_t UPVALUE_LEN = 7;
+      char *upvalueString = checkedMalloc(UPVALUE_LEN + 1);
+      memcpy(upvalueString, "upvalue", UPVALUE_LEN + 1);
+      return upvalueString;
+    }
     case OBJ_VECTOR:
       return objVectorToString(AS_VECTOR(value));
     default:
@@ -118,7 +128,7 @@ char *objectToString(Value value) {
   }
 }
 
-static char *objStringToString(ObjString *string) {
+static char *objStringToString(const ObjString *string) {
   size_t bufferSize = string->length + 2;  // 2 for double quotes, 1 for null.
   char *buffer = ALLOCATE(char, bufferSize);
   buffer[0] = '"';
@@ -128,14 +138,15 @@ static char *objStringToString(ObjString *string) {
   return buffer;
 }
 
-static char *objPairToString(ObjPair *pair) {
+static char *objPairToString(const ObjPair *pair) {
   GrowableString gs;
   initGrowableString(&gs);
   objPairToStringInGrowableString(pair, &gs);
   return gs.string;
 }
 
-static void objPairToStringInGrowableString(ObjPair *pair, GrowableString *gs) {
+static void objPairToStringInGrowableString(const ObjPair *pair,
+                                            GrowableString *gs) {
   if (IS_NIL(pair->cdr)) {
     growableStringAppendChar(gs, '(');
     char *carString = valueToString(pair->car);
@@ -186,7 +197,7 @@ static void objPairToStringInGrowableString(ObjPair *pair, GrowableString *gs) {
   growableStringAppendChar(gs, ')');
 }
 
-static char *listToString(ObjPair *list) {
+static char *listToString(const ObjPair *list) {
   GrowableString gs;
   initGrowableString(&gs);
 
@@ -210,8 +221,6 @@ static char *objClosureToString(ObjClosure *closure) {
   return objFunctionToString(closure->function);
 }
 
-static char *objNativeToString(NativeFn native) { return ""; }
-
 static char *objFunctionToString(ObjFunction *function) {
   if (function->name == NULL) {
     size_t scriptStringLength = 7;
@@ -230,9 +239,7 @@ static char *objFunctionToString(ObjFunction *function) {
   return buffer;
 }
 
-static char *objUpvalueToString(ObjUpvalue *upvalue) { return ""; }
-
-static char *objSymbolToString(ObjSymbol *symbol) {
+static char *objSymbolToString(const ObjSymbol *symbol) {
   size_t bufferSize = symbol->text->length + 2;  // single quote + null
   char *buffer = ALLOCATE(char, bufferSize);
   buffer[0] = '\'';
@@ -241,7 +248,25 @@ static char *objSymbolToString(ObjSymbol *symbol) {
   return buffer;
 }
 
-static char *objVectorToString(ObjVector *vector) { return ""; }
+static char *objVectorToString(const ObjVector *vector) {
+  GrowableString vecString;
+  initGrowableString(&vecString);
+  growableStringAppendString(&vecString, "#(");
+
+  char *elem = valueToString(vector->array.values[0]);
+  growableStringAppendString(&vecString, elem);
+  free(elem);
+
+  for (int i = 1; i < vector->array.count; i++) {
+    growableStringAppendChar(&vecString, ' ');
+    elem = valueToString(vector->array.values[i]);
+    growableStringAppendString(&vecString, elem);
+    free(elem);
+  }
+
+  growableStringAppendChar(&vecString, ')');
+  return vecString.string;
+}
 
 #define ALLOCATE_OBJ(type, objectType) \
   (type *)allocateObject(sizeof(type), objectType)

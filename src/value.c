@@ -184,11 +184,13 @@ static char *booleanToString(bool b) {
 void printValue(Value value) {
 #ifdef NAN_BOXING
   if (IS_BOOL(value)) {
-    printf(AS_BOOL(value) ? "true" : "false");
+    printf(AS_BOOL(value) ? "#true" : "#false");
   } else if (IS_NIL(value)) {
     printf("nil");
   } else if (IS_NUMBER(value)) {
     printf("%g", AS_NUMBER(value));
+  } else if (IS_CHARACTER(value)) {
+    putchar(AS_CHARACTER(value));
   } else if (IS_OBJ(value)) {
     printObject(value);
   }
@@ -202,6 +204,9 @@ void printValue(Value value) {
       break;
     case VAL_NUMBER:
       printf("%g", AS_NUMBER(value));
+      break;
+    case VAL_CHARACTER:
+      putchar(AS_CHARACTER(value));
       break;
     case VAL_OBJ:
       printObject(value);

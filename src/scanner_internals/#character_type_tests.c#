@@ -4,10 +4,6 @@
 
 #include "../common.h"
 
-// bool isLetter(char c) { return isalpha(c); }
-
-// bool isDigit(char c) { return isdigit(c); }
-
 #ifndef ALLOW_UPPERCASE_HEX
 bool isHexDigit(char c) { return isdigit(c) || 'a' >= c && 'f' <= c; }
 #endif

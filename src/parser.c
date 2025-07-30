@@ -272,6 +272,7 @@ static Value conditional() {
   append(AS_PAIR(ifExpression), NIL_VAL);
   pop();  // consequentInPair
 
+  // Nothing more to do if there is no alternative
   if (parserMatch(TOKEN_RIGHT_PAREN)) {
     return ifExpression;
   }

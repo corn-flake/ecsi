@@ -2,22 +2,20 @@
 
 #include <stdbool.h>
 
-/*
-  Returns true if c is a letter, uppercase or lowercase, otherwise returns
-  false.
- */
-bool isLetter(char c);
+#include "../common.h"
 
 /*
-  Returns true if c is a number, otherwise returns false.
+  The R7RS Standard specifies that hex digits are only lowercase,
+  but I'd like to give users the option to use uppercase.
+  If ALLOW_UPPERCASE_HEX is defined in common.h,
+  isHexDigit is just a macro for isxdigit which counts uppercase.
+  Otherwise, it's a custom function which doesn't.
  */
-bool isDigit(char c);
-
-/*
-  Returns true if c is a number or 'a', 'b', 'c', 'd', 'e', or 'f', otherwise
-  returns false.
- */
+#ifdef ALLOW_UPPERCASE_HEX
+#define isHexDigit(c) (bool)isxdigit(c)
+#else
 bool isHexDigit(char c);
+#endif
 
 bool isSpecialInitial(char c);
 bool isInitial(char c);

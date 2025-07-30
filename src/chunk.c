@@ -1,6 +1,7 @@
 #include "chunk.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "line_number.h"
@@ -25,7 +26,8 @@ void writeChunk(Chunk *chunk, uint8_t byte, int line) {
   }
 
   chunk->code[chunk->count] = byte;
-  assert(line == writeNumber(&chunk->lines, line));
+  int writtenLine = writeNumber(&chunk->lines, line);
+  assert(line == writtenLine);
   chunk->count++;
 }
 
@@ -46,10 +48,11 @@ int addConstant(Chunk *chunk, Value value) {
 int getLine(Chunk *chunk, int offset) {
   int counter = 0;
   int entryIndex = 0;
-  int entriesCount = numberOfEntries(&chunk->lines);
 
-  for (; entryIndex < entriesCount; entryIndex++) {
+  for (int entriesCount = numberOfEntries(&chunk->lines);
+       entryIndex < entriesCount; entryIndex++) {
     LineNumber currentEntry = chunk->lines.lineNumbers[entryIndex];
+
     if (counter + currentEntry.repeats >= offset) {
       return currentEntry.lineNumber;
     } else {
@@ -62,15 +65,15 @@ int getLine(Chunk *chunk, int offset) {
 
 void writeConstant(Chunk *chunk, Value value, int line) {
 #define NTH_BYTE(number, n) ((number >> (8 * n)) & 0xFF)
-  int constant_index = addConstant(chunk, value);
-  if (constant_index >= 256) {
+  int constantIndex = addConstant(chunk, value);
+  if (constantIndex >= 256) {
     writeChunk(chunk, OP_CONSTANT_LONG, line);
-    writeChunk(chunk, NTH_BYTE(constant_index, 2), line);
-    writeChunk(chunk, NTH_BYTE(constant_index, 1), line);
-    writeChunk(chunk, NTH_BYTE(constant_index, 0), line);
+    writeChunk(chunk, NTH_BYTE(constantIndex, 2), line);
+    writeChunk(chunk, NTH_BYTE(constantIndex, 1), line);
+    writeChunk(chunk, NTH_BYTE(constantIndex, 0), line);
   } else {
     writeChunk(chunk, OP_CONSTANT, line);
-    writeChunk(chunk, (uint8_t)constant_index, line);
+    writeChunk(chunk, (uint8_t)constantIndex, line);
   }
 #undef NTH_BYTE
 }
