@@ -6,45 +6,50 @@
 #include "token_to_type.h"
 
 Value vector(bool parseDatums) {
-  ObjVector *vector = newVector();
-  while (parser.current->type != TOKEN_RIGHT_PAREN) {
-    vectorAppend(vector, parseDatums ? parseDatum() : parseExpression());
-  }
-  return OBJ_VAL(vector);
+    ObjVector *vector = newVector();
+    while (canContinueList()) {
+        vectorAppend(vector, parseDatums ? parseDatum() : parseExpression());
+    }
+
+    if (!parserMatch(TOKEN_RIGHT_PAREN)) {
+        errorAtCurrent("Expect ')' to close vector literal.");
+    }
+
+    return OBJ_VAL(vector);
 }
 
 Value symbol() {
-  Value sym = OBJ_VAL(tokenToObjSymbol(parser.current));
-  parserAdvance();
-  return sym;
+    Value sym = OBJ_VAL(tokenToObjSymbol(parser.current));
+    parserAdvance();
+    return sym;
 }
 
 Value bytevector() {
-  parserAdvance();
-  ObjVector *bytevector = newVector();
+    parserAdvance();
+    ObjVector *bytevector = newVector();
 
-  while (parser.current->type != TOKEN_RIGHT_PAREN) {
-    if (parser.current->type != TOKEN_NUMBER) {
-      errorAtCurrent(
-          "Members of bytevector must be numbers between 0 "
-          "and 255 inclusive.");
-      break;
+    while (parser.current->type != TOKEN_RIGHT_PAREN) {
+        if (parser.current->type != TOKEN_NUMBER) {
+            errorAtCurrent(
+                "Members of bytevector must be numbers between 0 "
+                "and 255 inclusive.");
+            break;
+        }
+
+        double maybeByte = numberTokenToDouble(parser.current);
+        if (!IS_EXACT_INTEGER(NUMBER_VAL(maybeByte))) {
+            errorAtCurrent("Members of bytevector must be exact integers.");
+        }
+
+        int byte = (int)maybeByte;
+
+        if (byte > 255 || byte < 0) {
+            errorAtCurrent(
+                "Members of bytevector must be exact integers between 0 "
+                "and 255 inclusive.");
+            break;
+        }
+        vectorAppend(bytevector, NUMBER_VAL((double)byte));
     }
-
-    double maybeByte = numberTokenToDouble(parser.current);
-    if (IS_EXACT_INTEGER(NUMBER_VAL(maybeByte))) {
-      errorAtCurrent("Members of bytevector must be exact integers.");
-    }
-
-    int byte = (int)maybeByte;
-
-    if (byte > 255 || byte < 0) {
-      errorAtCurrent(
-          "Members of bytevector must be exact integers between 0 "
-          "and 255 inclusive.");
-      break;
-    }
-    vectorAppend(bytevector, NUMBER_VAL((double)byte));
-  }
-  return OBJ_VAL(bytevector);
+    return OBJ_VAL(bytevector);
 }

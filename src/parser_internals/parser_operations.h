@@ -5,13 +5,14 @@
 #include "../scanner.h"
 #include "../value.h"
 
-void parserAdvance();
-void errorAt(Token *token, const char *message);
-void error(const char *message);
-void errorAtCurrent(const char *message);
-void consume(TokenType type, const char *message);
-bool parserMatch(TokenType type);
+void advance();
+void errorAt(Token const *token, char const *message);
+void error(char const *message);
+void errorAtCurrent(char const *message);
+void consume(TokenType type, char const *message);
+bool match(TokenType type);
 bool check(TokenType type);
+bool canContinueList();
 
 Value parseListOfExpressions();
 Value parseListOfDatums();

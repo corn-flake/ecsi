@@ -113,9 +113,9 @@ EXECUTABLE_NAME = lisp_compiler
 
 COMPILE = gcc -c
 # COMPILE_DEBUG = $(COMPILE) -g3
-LINK=gcc -lm -lreadline
+LINK=gcc -lm -lreadline -fsanitize=address
 DEPEND=gcc -MM -MG -MF
-CFLAGS=-I. -I$(PATHU) -I$(PATHS) -DTEST -Wall -Wextra -Wpedantic -fanalyzer -g3
+CFLAGS=-I. -I$(PATHU) -I$(PATHS) -DTEST -Wall -Wextra -Wpedantic -fanalyzer -g3 -fsanitize=address
 # DEBUG_FLAGS=$(CFLAGS) -g3
 
 # Find all .c files and replace the .c with a .o to generate the object files.

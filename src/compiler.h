@@ -3,5 +3,5 @@
 #include "chunk.h"
 #include "object.h"
 
-ObjFunction *compile(const char *source);
+ObjFunction *compile(char const *source);
 void markCompilerRoots();

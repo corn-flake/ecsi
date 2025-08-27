@@ -65,78 +65,78 @@
 #define SET_CDDDR(value, new) (CDR(CDDR(value)) = new)
 
 typedef enum {
-  OBJ_CLOSURE,
-  OBJ_FUNCTION,
-  OBJ_PAIR,
-  OBJ_STRING,
-  OBJ_SYMBOL,
-  OBJ_NATIVE,
-  OBJ_UPVALUE,
-  OBJ_VECTOR,
+    OBJ_CLOSURE,
+    OBJ_FUNCTION,
+    OBJ_PAIR,
+    OBJ_STRING,
+    OBJ_SYMBOL,
+    OBJ_NATIVE,
+    OBJ_UPVALUE,
+    OBJ_VECTOR,
 } ObjType;
 
-const char *objTypeToString(ObjType type);
+char const *objTypeToString(ObjType type);
 
 struct Obj {
-  ObjType type;
-  bool isMarked;
-  struct Obj *next;
+    ObjType type;
+    bool isMarked;
+    struct Obj *next;
 };
 
 struct ObjString {
-  Obj obj;
-  int length;
-  char *chars;
-  // We store the string's hash because strings in Lox are
-  // immutable and it improves performance to not re-hash the string
-  // every time we look for a key in the hash table
-  uint32_t hash;
+    Obj obj;
+    int length;
+    char *chars;
+    // We store the string's hash because strings in Lox are
+    // immutable and it improves performance to not re-hash the string
+    // every time we look for a key in the hash table
+    uint32_t hash;
 };
 
 typedef struct ObjUpvalue {
-  Obj obj;
-  Value *location;
-  Value closed;
-  struct ObjUpvalue *next;
+    Obj obj;
+    Value *location;
+    Value closed;
+    struct ObjUpvalue *next;
 } ObjUpvalue;
 
 typedef struct {
-  Obj obj;
-  int arity;
-  int upvalueCount;
-  Chunk chunk;
-  ObjString *name;
+    Obj obj;
+    int arity;
+    int upvalueCount;
+    Chunk chunk;
+    ObjString *name;
 } ObjFunction;
 
 typedef struct {
-  Obj obj;
-  ObjFunction *function;
-  ObjUpvalue **upvalues;
-  int upvalueCount;
+    Obj obj;
+    ObjFunction *function;
+    ObjUpvalue **upvalues;
+    int upvalueCount;
 } ObjClosure;
 
 typedef Value (*NativeFn)(int argCount, Value *args);
 
 typedef struct {
-  Obj obj;
-  NativeFn function;
+    Obj obj;
+    NativeFn function;
 } ObjNative;
 
 typedef struct {
-  Obj obj;
-  Value car;
-  Value cdr;
+    Obj obj;
+    Value car;
+    Value cdr;
 } ObjPair;
 
 typedef struct {
-  Obj *obj;
-  ValueArray array;
+    Obj *obj;
+    ValueArray array;
 } ObjVector;
 
 typedef struct {
-  Obj obj;
-  ObjString *text;
-  Value value;
+    Obj obj;
+    ObjString *text;
+    Value value;
 } ObjSymbol;
 
 /*
@@ -147,7 +147,7 @@ typedef struct {
   which is not what we want if that expression has side-effects.
 */
 static inline bool isObjType(Value value, ObjType type) {
-  return IS_OBJ(value) && AS_OBJ(value)->type == type;
+    return IS_OBJ(value) && AS_OBJ(value)->type == type;
 }
 
 char *objectToString(Value value);
@@ -157,14 +157,14 @@ ObjFunction *newFunction();
 ObjPair *newPair(Value car, Value cdr);
 ObjNative *newNative(NativeFn function);
 ObjString *takeString(char *chars, int length);
-ObjString *copyString(const char *chars, int length);
+ObjString *copyString(char const *chars, int length);
 ObjVector *newVector();
 void vectorAppend(ObjVector *vector, Value value);
 ObjUpvalue *newUpvalue(Value *slot);
-ObjSymbol *newSymbol(const char *chars, int length);
+ObjSymbol *newSymbol(char const *chars, int length);
 
 void printObject(Value value);
 
 void append(ObjPair *pair, Value value);
-size_t listLength(ObjPair *pair);
+size_t listLength(ObjPair const *pair);
 ObjPair *finalPair(ObjPair *pair);

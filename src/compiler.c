@@ -19,37 +19,37 @@
 #define UNINITIALIZED_LOCAL -1
 
 typedef struct {
-  Token name;
-  int depth;
-  bool isCaptured;
+    Token name;
+    int depth;
+    bool isCaptured;
 } Local;
 
 typedef struct {
-  uint8_t index;
-  bool isLocal;
+    uint8_t index;
+    bool isLocal;
 } Upvalue;
 
 typedef enum {
-  TYPE_FUNCTION,
-  TYPE_INITIALIZER,
-  TYPE_METHOD,
-  TYPE_SCRIPT,
+    TYPE_FUNCTION,
+    TYPE_INITIALIZER,
+    TYPE_METHOD,
+    TYPE_SCRIPT,
 } FunctionType;
 
 typedef struct Compiler {
-  struct Compiler *enclosing;
-  ObjFunction *function;
-  FunctionType type;
+    struct Compiler *enclosing;
+    ObjFunction *function;
+    FunctionType type;
 
-  Local locals[UINT8_COUNT];
-  int localCount;
-  Upvalue upvalues[UINT8_COUNT];
-  int scopeDepth;
+    Local locals[UINT8_COUNT];
+    int localCount;
+    Upvalue upvalues[UINT8_COUNT];
+    int scopeDepth;
 } Compiler;
 
 typedef struct ClassCompiler {
-  struct ClassCompiler *enclosing;
-  bool hasSuperclass;
+    struct ClassCompiler *enclosing;
+    bool hasSuperclass;
 } ClassCompiler;
 
 Compiler *current = NULL;
@@ -156,28 +156,28 @@ static void patchJump(int offset) {
 }
 */
 static void initCompiler(Compiler *compiler, FunctionType type) {
-  compiler->enclosing = current;
-  compiler->function = NULL;
-  compiler->type = type;
-  compiler->localCount = 0;
-  compiler->scopeDepth = 0;
-  compiler->function = newFunction();
-  current = compiler;
-  if (type != TYPE_SCRIPT) {
-    current->function->name =
-        copyString(parser.previous->start, parser.previous->length);
-  }
+    compiler->enclosing = current;
+    compiler->function = NULL;
+    compiler->type = type;
+    compiler->localCount = 0;
+    compiler->scopeDepth = 0;
+    compiler->function = newFunction();
+    current = compiler;
+    if (type != TYPE_SCRIPT) {
+        current->function->name =
+            copyString(parser.previous->start, parser.previous->length);
+    }
 
-  Local *local = &current->locals[current->localCount++];
-  local->depth = 0;
-  local->isCaptured = false;
-  if (type != TYPE_FUNCTION) {
-    local->name.start = "this";
-    local->name.length = 4;
-  } else {
-    local->name.start = "";
-    local->name.length = 0;
-  }
+    Local *local = &current->locals[current->localCount++];
+    local->depth = 0;
+    local->isCaptured = false;
+    if (type != TYPE_FUNCTION) {
+        local->name.start = "this";
+        local->name.length = 4;
+    } else {
+        local->name.start = "";
+        local->name.length = 0;
+    }
 }
 
 /*
@@ -482,10 +482,10 @@ static void variable(bool canAssign) {
 }
 */
 
-static Token syntheticToken(const char *text) {
-  Token token = {
-      .type = TOKEN_IDENTIFIER, .start = text, .length = (int)strlen(text)};
-  return token;
+static Token syntheticToken(char const *text) {
+    Token token = {
+        .type = TOKEN_IDENTIFIER, .start = text, .length = (int)strlen(text)};
+    return token;
 }
 
 /*
@@ -546,44 +546,44 @@ static void string(bool canAssign) {
 
 static ObjFunction *compileValue(Value value) { return NULL; }
 
-ObjFunction *compile(const char *source) {
-  initScanner(source);
-  TokenArray tokens;
+ObjFunction *compile(char const *source) {
+    initScanner(source);
+    TokenArray tokens;
 
-  initTokenArray(&tokens);
-  Token token = scanToken();
-  while (token.type != TOKEN_EOF) {
-    addToken(&tokens, token);
-    token = scanToken();
-  }
+    initTokenArray(&tokens);
+    Token token = scanToken();
+    while (token.type != TOKEN_EOF) {
+        addToken(&tokens, token);
+        token = scanToken();
+    }
 
-  initParser(tokens);
-  printValue(parseExpression());
-  puts("");
-  freeTokenArray(&tokens);
+    initParser(tokens);
+    printValue(parseAllTokens());
+    puts("");
+    freeTokenArray(&tokens);
 
-  /*
-  Compiler compiler;
-  initCompiler(&compiler, TYPE_SCRIPT);
+    /*
+    Compiler compiler;
+    initCompiler(&compiler, TYPE_SCRIPT);
 
-  parser.hadError = false;
-  parser.panicMode = false;
+    parser.hadError = false;
+    parser.panicMode = false;
 
-  parserAdvance();
-  while (!parserMatch(TOKEN_EOF)) {
-    expression();
-  }
+    parserAdvance();
+    while (!parserMatch(TOKEN_EOF)) {
+      expression();
+    }
 
-  ObjFunction *function = endCompiler();
-  return parser.hadError ? NULL : function;
-  */
-  return NULL;
+    ObjFunction *function = endCompiler();
+    return parser.hadError ? NULL : function;
+    */
+    return NULL;
 }
 
 void markCompilerRoots() {
-  Compiler *compiler = current;
-  while (compiler != NULL) {
-    markObject((Obj *)compiler->function);
-    compiler = compiler->enclosing;
-  }
+    Compiler *compiler = current;
+    while (compiler != NULL) {
+        markObject((Obj *)compiler->function);
+        compiler = compiler->enclosing;
+    }
 }

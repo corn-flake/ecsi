@@ -29,15 +29,15 @@ typedef uint64_t Value;
 #define CHARACTER_VAL(character) (NUMBER_VAL((double)(character)))
 
 static inline Value numToValue(double num) {
-  Value value;
-  memcpy(&value, &num, sizeof(double));
-  return value;
+    Value value;
+    memcpy(&value, &num, sizeof(double));
+    return value;
 }
 
 static inline double valueToNum(Value value) {
-  double num;
-  memcpy(&num, &value, sizeof(Value));
-  return num;
+    double num;
+    memcpy(&num, &value, sizeof(Value));
+    return num;
 }
 
 #define IS_BOOL(value) (((value) | 1) == TRUE_VAL)
@@ -51,8 +51,8 @@ static inline double valueToNum(Value value) {
 #define AS_CHARACTER(value) ((char)AS_NUMBER(value))
 
 static inline bool isCharacter(Value value) {
-  return IS_EXACT_INTEGER(value) && CHAR_MIN <= AS_NUMBER(value) &&
-         CHAR_MAX >= AS_NUMBER(value);
+    return IS_EXACT_INTEGER(value) && CHAR_MIN <= AS_NUMBER(value) &&
+           CHAR_MAX >= AS_NUMBER(value);
 }
 
 #define IS_CHARACTER(value) isCharacter(value)
@@ -60,21 +60,21 @@ static inline bool isCharacter(Value value) {
 #else
 
 typedef enum {
-  VAL_BOOL,
-  VAL_NIL,
-  VAL_NUMBER,
-  VAL_CHARACTER,
-  VAL_OBJ,
+    VAL_BOOL,
+    VAL_NIL,
+    VAL_NUMBER,
+    VAL_CHARACTER,
+    VAL_OBJ,
 } ValueType;
 
 typedef struct {
-  ValueType type;
-  union {
-    bool boolean;
-    double number;
-    char character;
-    Obj *obj;
-  } as;
+    ValueType type;
+    union {
+        bool boolean;
+        double number;
+        char character;
+        Obj *obj;
+    } as;
 } Value;
 
 #define IS_BOOL(value) ((value).type == VAL_BOOL)
@@ -99,15 +99,15 @@ typedef struct {
 static inline bool doubleIsExact(double d) { return (double)(long)d == d; }
 
 static inline bool isExactInteger(Value value) {
-  return IS_NUMBER(value) && doubleIsExact(AS_NUMBER(value));
+    return IS_NUMBER(value) && doubleIsExact(AS_NUMBER(value));
 }
 
 #define IS_EXACT_INTEGER(value) isExactInteger(value)
 
 typedef struct {
-  int capacity;
-  int count;
-  Value *values;
+    int capacity;
+    int count;
+    Value *values;
 } ValueArray;
 
 // Test if two values are equal.

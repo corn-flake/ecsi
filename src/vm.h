@@ -9,42 +9,44 @@
 #define FRAMES_MAX 64
 
 typedef struct {
-  ObjClosure *closure;
-  uint8_t *ip;
-  Value *slots;
+    ObjClosure *closure;
+    uint8_t *ip;
+    Value *slots;
 } CallFrame;
 
 typedef struct {
-  CallFrame frames[FRAMES_MAX];
-  int frameCount;
+    CallFrame frames[FRAMES_MAX];
+    int frameCount;
 
-  Value stack[STACK_MAX];
-  Value *stackTop;
-  Obj *objects;
-  int grayCount;
-  int grayCapacity;
-  Obj **grayStack;
+    Value *stack;
+    Value *stackTop;
+    size_t stackCapacity;
 
-  Table globals;
-  Table strings;
-  ObjString *initString;
-  ObjUpvalue *openUpvalues;
+    Obj *objects;
+    int grayCount;
+    int grayCapacity;
+    Obj **grayStack;
 
-  size_t bytesAllocated;
-  size_t nextGC;
+    Table globals;
+    Table strings;
+    ObjString *initString;
+    ObjUpvalue *openUpvalues;
+
+    size_t bytesAllocated;
+    size_t nextGC;
 } VM;
 
 typedef enum {
-  INTERPRET_OK,
-  INTERPRET_COMPILE_ERROR,
-  INTERPRET_RUNTIME_ERROR,
+    INTERPRET_OK,
+    INTERPRET_COMPILE_ERROR,
+    INTERPRET_RUNTIME_ERROR,
 } InterpretResult;
 
 extern VM vm;
 
 void initVM();
 void freeVM();
-InterpretResult interpret(const char *source);
+InterpretResult interpret(char const *source);
 void push(Value value);
 Value pop();
 void printStack();

@@ -1,14 +1,14 @@
 #pragma once
 
 typedef struct {
-  int lineNumber;
-  int repeats;
+    int lineNumber;
+    int repeats;
 } LineNumber;
 
 typedef struct {
-  int count;
-  int capacity;
-  LineNumber *lineNumbers;
+    int count;
+    int capacity;
+    LineNumber *lineNumbers;
 } LineNumberArray;
 
 void initLineNumberArray(LineNumberArray *array);
