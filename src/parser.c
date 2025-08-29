@@ -46,25 +46,24 @@ Value parseExpression() {
         // Literals
         // Self evaluating values
         case TOKEN_BOOLEAN:
-            value = BOOL_VAL(booleanTokenToBool(parser.current));
-            parserAdvance();
+            value = parseBooleanNoCheck();
             break;
         case TOKEN_NUMBER:
-            value = NUMBER_VAL(numberTokenToDouble(parser.current));
-            parserAdvance();
+            value = parseNumberNoCheck();
             break;
         case TOKEN_CHARACTER:
-            value = CHARACTER_VAL(characterTokenToChar(parser.current));
+            value = parseCharacterNoCheck();
             break;
         case TOKEN_STRING:
-            value = OBJ_VAL(tokenToObjString(parser.current));
+            value = parseStringNoCheck();
             break;
         case TOKEN_POUND_LEFT_PAREN:
             parserAdvance();
-            value = vector(false);
+            value = parseVectorUsing(parseExpression);
             break;
         case TOKEN_POUND_U8_LEFT_PAREN:
-            value = bytevector();
+            parserAdvance();
+            value = parseBytevector();
             break;
 
             // Quotation
@@ -99,27 +98,23 @@ Value parseDatum() {
     switch (parser.current->type) {
             // Simple datums.
         case TOKEN_BOOLEAN:
-            value = BOOL_VAL(booleanTokenToBool(parser.current));
-            parserAdvance();
+            value = parseBooleanNoCheck();
             break;
         case TOKEN_NUMBER:
-            value = NUMBER_VAL(numberTokenToDouble(parser.current));
-            parserAdvance();
+            value = parseNumberNoCheck();
             break;
         case TOKEN_CHARACTER:
-            value = CHARACTER_VAL(characterTokenToChar(parser.current));
-            parserAdvance();
+            value = parseCharacterNoCheck();
             break;
         case TOKEN_STRING:
-            value = OBJ_VAL(tokenToObjString(parser.current));
-            parserAdvance();
+            value = parseStringNoCheck();
             break;
         case TOKEN_IDENTIFIER:
             value = symbol();
             parserAdvance();
             break;
         case TOKEN_POUND_U8_LEFT_PAREN:
-            value = bytevector();
+            value = parseBytevector();
             break;
 
             // Compound datums.
@@ -131,7 +126,7 @@ Value parseDatum() {
         case TOKEN_POUND_LEFT_PAREN:
             // Consume the '#('
             parserAdvance();
-            value = vector(true);
+            value = parseVectorUsing(parseDatum);
             break;
         case TOKEN_QUOTE:
         case TOKEN_BACKQUOTE:
@@ -149,10 +144,12 @@ Value parseDatum() {
 
 static void appendToAst(Value value) {
     push(value);
+
     if (IS_NIL(parser.ast)) {
         parser.ast = CONS(value, NIL_VAL);
     } else {
         append(AS_PAIR(parser.ast), value);
     }
+
     pop();  // value
 }

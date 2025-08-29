@@ -34,8 +34,7 @@ Value cond() {
 
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'cond'.");
 
-    if (memcmp(parser.current->start, "else", min(4, parser.current->length)) ==
-        0) {
+    if (currentTokenMatchesString("else")) {
         Value elseSymbol = symbol();
         push(elseSymbol);
 
