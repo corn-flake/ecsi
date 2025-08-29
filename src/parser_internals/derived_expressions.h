@@ -1,38 +1,7 @@
 #include "../value.h"
+#include "parser_operations.h"
 
-typedef enum {
-    NOT_DERIVED_EXPR,
-    DERIVED_EXPR_COND,
-    /*
-    DERIVED_EXPR_CASE,
-    */
-    DERIVED_EXPR_AND,
-    DERIVED_EXPR_OR,
-    /*
-    DERIVED_EXPR_WHEN,
-    DERIVED_EXPR_UNLESS,
-    */
-    DERIVED_EXPR_LET,
-    /*
-    DERIVED_EXPR_NAMED_LET,
-    DERIVED_EXPR_LET_STAR,
-    DERIVED_EXPR_LETREC,
-    DERIVED_EXPR_LETREC_STAR,
-    DERIVED_EXPR_LET_VALUES,
-    DERIVED_EXPR_LET_STAR_VALUES,
-    DERIVED_EXPR_BEGIN,
-    DERIVED_EXPR_DO,
-    DERIVED_EXPR_DELAY,
-    DERIVED_EXPR_DELAY_FORCE,
-    DERIVED_EXPR_PARAMETERIZE,
-    DERIVED_EXPR_GUARD,
-    DERIVED_EXPR_QUASIQUOTE,
-    DERIVED_EXPR_CASE_LAMBDA,
-    */
-} DerivedExpressionType;
-
-DerivedExpressionType derivedExpressionType();
-Value derivedExpression(DerivedExpressionType type);
+ParseFn getDerivedExpressionParseFn();
 Value and_();
 Value cond();
 Value or_();

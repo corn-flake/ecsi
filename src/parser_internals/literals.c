@@ -5,10 +5,14 @@
 #include "parser_operations.h"
 #include "token_to_type.h"
 
-Value vector(bool parseDatums) {
+Value parseVectorUsing(ParseFn parse) {
     ObjVector *vector = newVector();
+    if (parserMatch(TOKEN_RIGHT_PAREN)) {
+        return OBJ_VAL(vector);
+    }
+
     while (canContinueList()) {
-        vectorAppend(vector, parseDatums ? parseDatum() : parseExpression());
+        vectorAppend(vector, parse());
     }
 
     if (!parserMatch(TOKEN_RIGHT_PAREN)) {

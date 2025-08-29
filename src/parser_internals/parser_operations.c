@@ -7,6 +7,8 @@
 #include "../value.h"
 #include "../vm.h"
 
+static inline size_t min(size_t a, size_t b) { return a < b ? a : b; }
+
 void errorAt(Token const *token, const char *message) {
     if (parser.panicMode) return;
     parser.panicMode = true;
@@ -29,7 +31,7 @@ void error(char const *message) { errorAt(parser.previous, message); }
 
 void errorAtCurrent(char const *message) { errorAt(parser.current, message); }
 
-void advance() {
+void parserAdvance() {
     parser.previous = parser.current;
 
     while (true) {
@@ -41,7 +43,7 @@ void advance() {
 
 void consume(TokenType type, char const *message) {
     if (parser.current->type == type) {
-        advance();
+        parserAdvance();
         return;
     }
     errorAtCurrent(message);
@@ -49,9 +51,9 @@ void consume(TokenType type, char const *message) {
 
 bool check(TokenType type) { return parser.current->type == type; }
 
-bool match(TokenType type) {
+bool parserMatch(TokenType type) {
     if (!check(type)) return false;
-    advance();
+    parserAdvance();
     return true;
 }
 
@@ -59,24 +61,36 @@ bool canContinueList() {
     return !check(TOKEN_RIGHT_PAREN) && !check(TOKEN_EOF);
 }
 
-static Value parseList(bool parseDatums) {
-    if (check(TOKEN_RIGHT_PAREN)) return NIL_VAL;
-
-    Value firstElement = parseDatums ? parseDatum() : parseExpression();
-
-    push(firstElement);
-    ObjPair *list = newPair(firstElement, NIL_VAL);
-    pop();  // firstElement
-
-    push(OBJ_VAL(list));
-    while (!check(TOKEN_RIGHT_PAREN)) {
-        append(list, parseDatums ? parseDatum() : parseExpression());
-    }
-    pop();  // list
-
-    return OBJ_VAL(list);
+bool currentTokenMatchesString(char *const string) {
+    return !memcmp(parser.current->start, string,
+                   min(strlen(string), parser.current->length));
 }
 
-Value parseListOfExpressions() { return parseList(false); }
+Value parseListUsing(ParseFn parse) {
+    if (parserMatch(TOKEN_RIGHT_PAREN)) return NIL_VAL;
 
-Value parseListOfDatums() { return parseList(true); }
+    Value expr = parse();
+
+    push(expr);
+    Value list = CONS(expr, NIL_VAL);
+    pop();  // firstElement
+    push(list);
+
+    while (canContinueList()) {
+        expr = parse();
+        push(expr);
+        append(AS_PAIR(list), expr);
+        pop();  // expr
+    }
+
+    if (!parserMatch(TOKEN_RIGHT_PAREN)) {
+        errorAtCurrent("Expect ')' to close list.");
+    }
+
+    pop();  // list
+    return list;
+}
+
+Value parseListOfExpressions() { return parseListUsing(parseExpression); }
+
+Value parseListOfDatums() { return parseListUsing(parseDatum); }

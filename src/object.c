@@ -221,7 +221,7 @@ static char *objClosureToString(ObjClosure const *closure) {
     return objFunctionToString(closure->function);
 }
 
-static char *objFunctionToString(ObjFunction *function) {
+static char *objFunctionToString(ObjFunction const *function) {
     if (function->name == NULL) {
         size_t scriptStringLength = 7;
         char *scriptString = checkedMalloc(scriptStringLength + 1);
@@ -334,7 +334,7 @@ static ObjString *allocateString(char *chars, int length, uint32_t hash) {
     return string;
 }
 
-static uint32_t hashString(char *key, int length) {
+static uint32_t hashString(char const *key, int length) {
     uint32_t hash = 2166136261u;
     for (int i = 0; i < length; i++) {
         hash ^= (uint8_t)key[i];

@@ -40,8 +40,10 @@ static void repl() {
         }
 
         interpret(line);
+        free(line);
         line = readline("> ");
     }
+    puts("");
 }
 
 static void runFile(char const *path) {

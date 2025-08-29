@@ -18,8 +18,8 @@
 
 Parser parser;
 
-static Value listBasedExpression();
 static void appendToAst(Value value);
+static void parseListBasedExpression();
 
 void initParser(TokenArray tokens) {
     parser.tokens = tokens;
@@ -47,11 +47,11 @@ Value parseExpression() {
         // Self evaluating values
         case TOKEN_BOOLEAN:
             value = BOOL_VAL(booleanTokenToBool(parser.current));
-            advance();
+            parserAdvance();
             break;
         case TOKEN_NUMBER:
             value = NUMBER_VAL(numberTokenToDouble(parser.current));
-            advance();
+            parserAdvance();
             break;
         case TOKEN_CHARACTER:
             value = CHARACTER_VAL(characterTokenToChar(parser.current));
@@ -60,6 +60,7 @@ Value parseExpression() {
             value = OBJ_VAL(tokenToObjString(parser.current));
             break;
         case TOKEN_POUND_LEFT_PAREN:
+            parserAdvance();
             value = vector(false);
             break;
         case TOKEN_POUND_U8_LEFT_PAREN:
@@ -69,7 +70,7 @@ Value parseExpression() {
             // Quotation
         case TOKEN_QUOTE:
             // Read the quote
-            advance();
+            parserAdvance();
             value = parseDatum();
             break;
 
@@ -79,7 +80,8 @@ Value parseExpression() {
             break;
 
         case TOKEN_LEFT_PAREN: {
-            value = listBasedExpression();
+            parserAdvance();
+            value = parseListOfExpressions();
             break;
         }
 
@@ -98,23 +100,23 @@ Value parseDatum() {
             // Simple datums.
         case TOKEN_BOOLEAN:
             value = BOOL_VAL(booleanTokenToBool(parser.current));
-            advance();
+            parserAdvance();
             break;
         case TOKEN_NUMBER:
             value = NUMBER_VAL(numberTokenToDouble(parser.current));
-            advance();
+            parserAdvance();
             break;
         case TOKEN_CHARACTER:
             value = CHARACTER_VAL(characterTokenToChar(parser.current));
-            advance();
+            parserAdvance();
             break;
         case TOKEN_STRING:
             value = OBJ_VAL(tokenToObjString(parser.current));
-            advance();
+            parserAdvance();
             break;
         case TOKEN_IDENTIFIER:
             value = symbol();
-            advance();
+            parserAdvance();
             break;
         case TOKEN_POUND_U8_LEFT_PAREN:
             value = bytevector();
@@ -123,19 +125,19 @@ Value parseDatum() {
             // Compound datums.
         case TOKEN_LEFT_PAREN:
             // Consume the '('
-            advance();
+            parserAdvance();
             value = parseListOfDatums();
             break;
         case TOKEN_POUND_LEFT_PAREN:
             // Consume the '#('
-            advance();
+            parserAdvance();
             value = vector(true);
             break;
         case TOKEN_QUOTE:
         case TOKEN_BACKQUOTE:
         case TOKEN_COMMA:
         case TOKEN_COMMA_AT:
-            advance();
+            parserAdvance();
             value = parseDatum();
             break;
         default:
@@ -153,32 +155,4 @@ static void appendToAst(Value value) {
         append(AS_PAIR(parser.ast), value);
     }
     pop();  // value
-}
-
-static Value listBasedExpression() {
-    // Read the left paren
-    advance();
-
-    if (TOKEN_RIGHT_PAREN == parser.current->type) {
-        return NIL_VAL;  // Empty list
-    }
-
-    Value expr = parseExpression();
-    push(expr);
-
-    Value list = CONS(expr, NIL_VAL);
-    pop();  // expr
-    push(list);
-
-    while (TOKEN_RIGHT_PAREN != parser.current->type) {
-        expr = parseExpression();
-        push(expr);
-        append(AS_PAIR(list), expr);
-        pop();  // expr
-    }
-
-    advance();  // Read closing paren
-
-    pop();  // list
-    return list;
 }
