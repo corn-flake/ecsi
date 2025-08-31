@@ -81,7 +81,7 @@ Value parseExpression() {
 
         case TOKEN_LEFT_PAREN: {
             parserAdvance();
-            value = parseListOfExpressions();
+            value = parseListBasedExpression();
             break;
         }
 
@@ -112,7 +112,7 @@ static Value parseListBasedExpression() {
         Value rest = parse();
         push(rest);
 
-        append(AS_PAIR(expr), rest);
+        SET_CDR(expr, rest);
 
         pop();  // rest
         pop();  // expr

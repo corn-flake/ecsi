@@ -6,6 +6,21 @@
 #include "literals.h"
 #include "parser_operations.h"
 
+/*
+  NOTE: In this file, you will see the idiom:
+  Value xyz = CONS(abc, NIL_VAL);
+  push(xyz);
+  SET_CDR(xyz, CONS(def, NIL_VAL));
+  pop(); // xyz
+  often. This would be nicely expressed as
+  Value xyz = CONS(abc, CONS(def, NIL_VAL));
+  however, note that the result of the inner CONS
+  can only be found on the C stack. Therefore,
+  we must seperate the calls and push xyz between them.
+  We use SET_CDR instead of append because in this case,
+  SET_CDR is more efficient.
+ */
+
 static Value parseBindingSpec();
 
 ParseFn getDerivedExpressionParseFn() {
@@ -45,7 +60,9 @@ Value parseLet() {
     Value exprs = parseListOfExpressions();
     push(exprs);
 
-    Value letExpr = CONS(bindings, CONS(exprs, NIL_VAL));
+    Value letExpr = CONS(bindings, NIL_VAL);
+    SET_CDR(letExpr, exprs);
+
     pop();  // exprs
     pop();  // bindings
     return letExpr;
@@ -53,7 +70,9 @@ Value parseLet() {
 
 static Value parseBindingSpec() {
     consume(TOKEN_LEFT_PAREN, "Expect '(' to start binding spec.");
-    consume(TOKEN_IDENTIFIER, "Expect identifier after '(' in binding spec.");
+    if (!check(TOKEN_IDENTIFIER)) {
+        errorAtCurrent("Expect identifier as first element in binding spec.");
+    }
 
     Value target = symbol();
     push(target);
@@ -61,8 +80,13 @@ static Value parseBindingSpec() {
     Value value = parseExpression();
     push(value);
 
-    Value spec = CONS(target, CONS(value, NIL_VAL));
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' to close binding spec.");
 
+    Value spec = CONS(target, NIL_VAL);
+    push(spec);
+    SET_CDR(spec, CONS(value, NIL_VAL));
+
+    pop();  // spec
     pop();  // value
     pop();  // target
 
