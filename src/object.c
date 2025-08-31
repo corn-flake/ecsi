@@ -485,6 +485,9 @@ static void printList(ObjPair const *list) {
 }
 
 void append(ObjPair *pair, Value value) {
+    // Nothing to do
+    if (IS_NIL(value)) return;
+
     while (!IS_NIL(pair->cdr)) {
         if (!IS_PAIR(pair->cdr)) {
             fprintf(stderr,

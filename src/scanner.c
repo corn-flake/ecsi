@@ -163,3 +163,21 @@ Token scanToken() {
 
     return errorToken("Unexpected character.");
 }
+
+void scanAllTokensInto(TokenArray *tokenArray) {
+    Token token;
+    do {
+        token = scanToken();
+        addToken(tokenArray, token);
+    } while (TOKEN_EOF != token.type);
+
+    /*
+    Token token = scanToken();
+    while (token.type != TOKEN_EOF) {
+        addToken(tokenArray, token);
+        token = scanToken();
+    }
+    // Add EOF token
+    addToken(tokenArray, token);
+    */
+}

@@ -19,7 +19,8 @@
 Parser parser;
 
 static void appendToAst(Value value);
-static void parseListBasedExpression();
+static Value parseListBasedExpression();
+static Value parseQuotation();
 
 void initParser(TokenArray tokens) {
     parser.tokens = tokens;
@@ -33,7 +34,7 @@ void initParser(TokenArray tokens) {
 void markParserRoots() { markValue(parser.ast); }
 
 Value parseAllTokens() {
-    while (parser.current < parser.tokens.array + parser.tokens.count) {
+    while (!check(TOKEN_EOF)) {
         appendToAst(parseExpression());
     }
     return parser.ast;
@@ -70,7 +71,7 @@ Value parseExpression() {
         case TOKEN_QUOTE:
             // Read the quote
             parserAdvance();
-            value = parseDatum();
+            value = parseQuotation();
             break;
 
             // Identifiers
@@ -84,12 +85,60 @@ Value parseExpression() {
             break;
         }
 
+        case TOKEN_EOF:
+            value = NIL_VAL;
+            break;
+
         default:
             fprintf(stderr, "TODO: parse %s tokens.\n",
                     tokenTypeToString(parser.current->type));
     }
 
     return value;
+}
+
+static Value parseListBasedExpression() {
+    ParseFn parse = getDerivedExpressionParseFn();
+
+    // Derived expression
+    if (NULL != parse) {
+        Value name = symbol();
+        push(name);
+
+        Value expr = CONS(name, NIL_VAL);
+        pop();  // name
+        push(expr);
+
+        Value rest = parse();
+        push(rest);
+
+        append(AS_PAIR(expr), rest);
+
+        pop();  // rest
+        pop();  // expr
+        return expr;
+    }
+
+    // Procedure call
+    return parseListOfExpressions();
+}
+
+static Value parseQuotation() {
+    size_t const QUOTE_LEN = 5;
+    Value quoteSymbol = OBJ_VAL(newSymbol("quote", QUOTE_LEN));
+    push(quoteSymbol);
+
+    Value list = CONS(quoteSymbol, NIL_VAL);
+    pop();  // quoteSymbol
+    push(list);
+
+    Value expr = parseExpression();
+    push(expr);
+    append(AS_PAIR(list), expr);
+
+    pop();  // expr
+    pop();  // list
+    return list;
 }
 
 Value parseDatum() {

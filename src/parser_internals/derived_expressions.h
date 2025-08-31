@@ -2,7 +2,7 @@
 #include "parser_operations.h"
 
 ParseFn getDerivedExpressionParseFn();
-Value and_();
-Value cond();
-Value or_();
-Value let();
+Value parseAnd();
+// Value cond();
+Value parseOr();
+Value parseLet();

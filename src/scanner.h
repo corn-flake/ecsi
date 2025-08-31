@@ -57,3 +57,4 @@ extern Scanner scanner;
 
 void initScanner(char const *source);
 Token scanToken();
+void scanAllTokensInto(TokenArray *tokenArray);

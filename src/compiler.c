@@ -549,13 +549,8 @@ static ObjFunction *compileValue(Value value) { return NULL; }
 ObjFunction *compile(char const *source) {
     initScanner(source);
     TokenArray tokens;
-
     initTokenArray(&tokens);
-    Token token = scanToken();
-    while (token.type != TOKEN_EOF) {
-        addToken(&tokens, token);
-        token = scanToken();
-    }
+    scanAllTokensInto(&tokens);
 
     initParser(tokens);
     printValue(parseAllTokens());

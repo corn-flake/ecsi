@@ -31,44 +31,54 @@ Value symbol() {
 }
 
 Value parseNumber() {
-    if (!parserMatch(TOKEN_NUMBER)) {
+    if (!check(TOKEN_NUMBER)) {
         errorAtCurrent("Expect number.");
     }
     return parseNumberNoCheck();
 }
 
 Value parseBoolean() {
-    if (!parserMatch(TOKEN_BOOLEAN)) {
+    if (!check(TOKEN_BOOLEAN)) {
         errorAtCurrent("Expect boolean.");
     }
     return parseBooleanNoCheck();
 }
 
 Value parseCharacter() {
-    if (!parserMatch(TOKEN_CHARACTER)) {
+    if (!check(TOKEN_CHARACTER)) {
         errorAtCurrent("Expect character.");
     }
     return parseCharacterNoCheck();
 }
 
 Value parseString() {
-    if (!parserMatch(TOKEN_STRING)) {
+    if (!check(TOKEN_STRING)) {
         errorAtCurrent("Expect string.");
     }
     return parseStringNoCheck();
 }
 
 Value parseNumberNoCheck() {
-    return NUMBER_VAL(numberTokenToDouble(parser.current));
+    Value num = NUMBER_VAL(numberTokenToDouble(parser.current));
+    parserAdvance();
+    return num;
 }
 
 Value parseBooleanNoCheck() {
-    return BOOL_VAL(booleanTokenToBool(parser.current));
+    Value b = BOOL_VAL(booleanTokenToBool(parser.current));
+    parserAdvance();
+    return b;
 }
 Value parseCharacterNoCheck() {
-    return CHARACTER_VAL(characterTokenToChar(parser.current));
+    Value c = CHARACTER_VAL(characterTokenToChar(parser.current));
+    parserAdvance();
+    return c;
 }
-Value parseStringNoCheck() { return OBJ_VAL(tokenToObjString(parser.current)); }
+Value parseStringNoCheck() {
+    Value s = OBJ_VAL(tokenToObjString(parser.current));
+    parserAdvance();
+    return s;
+}
 
 Value parseBytevector() { return parseVectorUsing(parseBytevectorElement); }
 

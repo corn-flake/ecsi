@@ -61,9 +61,16 @@ bool canContinueList() {
     return !check(TOKEN_RIGHT_PAREN) && !check(TOKEN_EOF);
 }
 
+bool tokenMatchesString(Token *token, char *const string) {
+    return !memcmp(token->start, string, min(strlen(string), token->length));
+}
+
 bool currentTokenMatchesString(char *const string) {
-    return !memcmp(parser.current->start, string,
-                   min(strlen(string), parser.current->length));
+    return tokenMatchesString(parser.current, string);
+}
+
+bool previousTokenMatchesString(char *const string) {
+    return tokenMatchesString(parser.previous, string);
 }
 
 Value parseListUsing(ParseFn parse) {

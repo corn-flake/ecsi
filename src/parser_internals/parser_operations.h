@@ -15,6 +15,8 @@ void consume(TokenType type, char const *message);
 bool parserMatch(TokenType type);
 bool check(TokenType type);
 bool canContinueList();
+bool tokenMatchesString(Token *token, char *const string);
+bool previousTokenMatchesString(char *const string);
 bool currentTokenMatchesString(char *const string);
 
 Value parseListUsing(ParseFn parse);
