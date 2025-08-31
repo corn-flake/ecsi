@@ -60,8 +60,7 @@ Value parseLet() {
     Value exprs = parseListOfExpressions();
     push(exprs);
 
-    Value letExpr = CONS(bindings, NIL_VAL);
-    SET_CDR(letExpr, exprs);
+    Value letExpr = CONS(bindings, exprs);
 
     pop();  // exprs
     pop();  // bindings
