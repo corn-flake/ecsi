@@ -1,5 +1,6 @@
 #include "parser_operations.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 
 #include "../object.h"
@@ -8,14 +9,49 @@
 #include "../vm.h"
 
 static inline size_t min(size_t a, size_t b) { return a < b ? a : b; }
+static void formattedErrorAt(Token const *token, char const *format, ...);
+static void varArgsFormattedErrorAt(Token const *token, char const *format,
+                                    va_list args);
+static void formattedError(char const *format, ...);
+static void formattedErrorAtCurrent(char const *format, ...);
 
-void errorAt(Token const *token, const char *message) {
+void errorAt(Token const *token, char const *message) {
+    formattedErrorAt(token, "%s", message);
+}
+
+static void formattedErrorAt(Token const *token, char const *format, ...) {
+    va_list args;
+    va_start(args, format);
+    varArgsFormattedErrorAt(token, format, args);
+    va_end(args);
+}
+
+void error(char const *message) { errorAt(parser.previous, message); }
+
+static void formattedError(char const *format, ...) {
+    va_list args;
+    va_start(args, format);
+    varArgsFormattedErrorAt(parser.previous, format, args);
+    va_end(args);
+}
+
+void errorAtCurrent(char const *message) { errorAt(parser.current, message); }
+
+static void formattedErrorAtCurrent(char const *format, ...) {
+    va_list args;
+    va_start(args, format);
+    varArgsFormattedErrorAt(parser.current, format, args);
+    va_end(args);
+}
+
+static void varArgsFormattedErrorAt(Token const *token, char const *format,
+                                    va_list args) {
     if (parser.panicMode) return;
     parser.panicMode = true;
     fprintf(stderr, "[line %zu] Error", token->line);
-    if (token->type == TOKEN_EOF) {
+    if (TOKEN_EOF == token->type) {
         fprintf(stderr, " at end");
-    } else if (token->type == TOKEN_ERROR) {
+    } else if (TOKEN_ERROR == token->type) {
         /*
           We don't do anything if the token is an error because if it is,
           the token's error message will be passed as the MESSAGE
@@ -23,13 +59,12 @@ void errorAt(Token const *token, const char *message) {
     } else {
         fprintf(stderr, " at '%.*s'", (int)token->length, token->start);
     }
-    fprintf(stderr, ": %s\n", message);
+    fprintf(stderr, ": ");
+    vfprintf(stderr, format, args);
+    fputs("\n", stderr);
+
     parser.hadError = true;
 }
-
-void error(char const *message) { errorAt(parser.previous, message); }
-
-void errorAtCurrent(char const *message) { errorAt(parser.current, message); }
 
 void parserAdvance() {
     parser.previous = parser.current;
@@ -42,14 +77,14 @@ void parserAdvance() {
 }
 
 void consume(TokenType type, char const *message) {
-    if (parser.current->type == type) {
+    if (type == parser.current->type) {
         parserAdvance();
         return;
     }
     errorAtCurrent(message);
 }
 
-bool check(TokenType type) { return parser.current->type == type; }
+bool check(TokenType type) { return type == parser.current->type; }
 
 bool parserMatch(TokenType type) {
     if (!check(type)) return false;
@@ -73,28 +108,44 @@ bool previousTokenMatchesString(char *const string) {
     return tokenMatchesString(parser.previous, string);
 }
 
-Value parseListUsing(ParseFn parse) {
-    if (parserMatch(TOKEN_RIGHT_PAREN)) return NIL_VAL;
+Value parseListUsing(ParseFn parse) { return parseNExprsIntoList(parse, -1); }
+
+Value parseNExprsIntoList(ParseFn parse, int n) {
+    if (0 == n) {
+        consume(TOKEN_RIGHT_PAREN,
+                "Expect right parenthesis to finish empty list");
+        return NIL_VAL;
+    }
+
+    if (-1 == n && parserMatch(TOKEN_RIGHT_PAREN)) return NIL_VAL;
 
     Value expr = parse();
 
-    push(expr);
-    Value list = CONS(expr, NIL_VAL);
-    pop();  // firstElement
+    Value list = guardedCons(expr, NIL_VAL);
+    // We push here to avoid pushing in every iteration before calling parse.
     push(list);
 
-    while (canContinueList()) {
-        expr = parse();
-        push(expr);
-        append(AS_PAIR(list), expr);
-        pop();  // expr
-    }
-
-    if (!parserMatch(TOKEN_RIGHT_PAREN)) {
-        errorAtCurrent("Expect ')' to close list.");
+    if (-1 == n) {
+        while (canContinueList()) {
+            expr = parse();
+            guardedAppend(list, expr);
+        }
+    } else {
+        for (int i = 1; i < n; i++) {
+            if (check(TOKEN_RIGHT_PAREN)) {
+                formattedErrorAtCurrent(
+                    "Expected list of %d elements but only found %d elements.",
+                    n, i);
+                break;
+            }
+            expr = parse();
+            guardedAppend(list, expr);
+        }
     }
 
     pop();  // list
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' to close list.");
+
     return list;
 }
 

@@ -103,20 +103,14 @@ static Value parseListBasedExpression() {
 
     // Derived expression
     if (NULL != parse) {
-        Value name = symbol();
-        push(name);
+        Value expr = guardedCons(symbol(), NIL_VAL);
 
-        Value expr = CONS(name, NIL_VAL);
-        pop();  // name
         push(expr);
-
         Value rest = parse();
-        push(rest);
+        pop();  // expr
 
         SET_CDR(expr, rest);
 
-        pop();  // rest
-        pop();  // expr
         return expr;
     }
 
@@ -127,18 +121,14 @@ static Value parseListBasedExpression() {
 static Value parseQuotation() {
     size_t const QUOTE_LEN = 5;
     Value quoteSymbol = OBJ_VAL(newSymbol("quote", QUOTE_LEN));
-    push(quoteSymbol);
+    Value list = guardedCons(quoteSymbol, NIL_VAL);
 
-    Value list = CONS(quoteSymbol, NIL_VAL);
-    pop();  // quoteSymbol
     push(list);
-
     Value expr = parseExpression();
-    push(expr);
-    append(AS_PAIR(list), expr);
-
-    pop();  // expr
     pop();  // list
+
+    guardedAppend(list, expr);
+
     return list;
 }
 
@@ -193,13 +183,9 @@ Value parseDatum() {
 }
 
 static void appendToAst(Value value) {
-    push(value);
-
     if (IS_NIL(parser.ast)) {
-        parser.ast = CONS(value, NIL_VAL);
+        parser.ast = guardedCons(value, NIL_VAL);
     } else {
-        append(AS_PAIR(parser.ast), value);
+        guardedAppend(parser.ast, value);
     }
-
-    pop();  // value
 }

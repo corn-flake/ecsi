@@ -485,6 +485,7 @@ static void printList(ObjPair const *list) {
 }
 
 void append(ObjPair *pair, Value value) {
+    ObjPair *originalPair = pair;
     // Nothing to do
     if (IS_NIL(value)) return;
 
@@ -499,19 +500,40 @@ void append(ObjPair *pair, Value value) {
         }
         pair = AS_PAIR(pair->cdr);
     }
+
     push(value);
+    push(OBJ_VAL(originalPair));
+
     ObjPair *tail = newPair(value, NIL_VAL);
     pair->cdr = OBJ_VAL(tail);
+
+    pop();  // originalPair
     pop();  // value
 }
 
+void guardedAppend(Value list, Value elem) {
+    if (IS_OBJ(elem)) push(elem);
+    append(AS_PAIR(list), elem);
+    if (IS_OBJ(elem)) pop();  // elem
+}
+
 size_t listLength(ObjPair const *pair) {
-    size_t length = 1;
-    while (IS_PAIR(pair->cdr)) {
+    if (IS_NIL(pair->cdr)) return 1;
+    size_t length = 0;
+    while (!IS_NIL(pair->cdr) && IS_PAIR(pair->cdr)) {
         length++;
         pair = AS_PAIR(pair->cdr);
     }
     return length;
+}
+
+Value guardedCons(Value car, Value cdr) {
+    if (IS_OBJ(car)) push(car);
+    if (IS_OBJ(cdr)) push(cdr);
+    Value pair = CONS(car, cdr);
+    if (IS_OBJ(car)) pop();
+    if (IS_OBJ(cdr)) pop();
+    return pair;
 }
 
 ObjPair *finalPair(ObjPair *list) {

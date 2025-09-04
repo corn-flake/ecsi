@@ -20,5 +20,7 @@ bool previousTokenMatchesString(char *const string);
 bool currentTokenMatchesString(char *const string);
 
 Value parseListUsing(ParseFn parse);
+// n == -1 indicates to parse until a right paren is found.
+Value parseNExprsIntoList(ParseFn parse, int n);
 Value parseListOfExpressions();
 Value parseListOfDatums();
