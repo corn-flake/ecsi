@@ -6,22 +6,11 @@
 #include "literals.h"
 #include "parser_operations.h"
 
-/*
-  NOTE: In this file, you will see the idiom:
-  Value xyz = CONS(abc, NIL_VAL);
-  push(xyz);
-  SET_CDR(xyz, CONS(def, NIL_VAL));
-  pop(); // xyz
-  often. This would be nicely expressed as
-  Value xyz = CONS(abc, CONS(def, NIL_VAL));
-  however, note that the result of the inner CONS
-  can only be found on the C stack. Therefore,
-  we must seperate the calls and push xyz between them.
-  We use SET_CDR instead of append because in this case,
-  SET_CDR is more efficient.
- */
-
 static Value parseBindingSpec();
+static Value parseIf();
+static Value parseAnd();
+static Value parseOr();
+static Value parseLet();
 
 ParseFn getDerivedExpressionParseFn() {
     if (!check(TOKEN_IDENTIFIER)) {
@@ -46,12 +35,52 @@ ParseFn getDerivedExpressionParseFn() {
         return parseOr;
     }
 
+    if (currentTokenMatchesString("if")) {
+        return parseIf;
+    }
+
     return NULL;
 }
 
-Value parseOr() { return parseListOfExpressions(); }
+static Value parseIf() {
+    if (parserMatch(TOKEN_RIGHT_PAREN)) {
+        error("Expect expression after 'if'.");
+    }
 
-Value parseLet() {
+    Value condition = parseExpression();
+
+    push(condition);
+    Value ifExpr = CONS(condition, NIL_VAL);
+    pop();  // condition
+    push(ifExpr);
+
+    if (parserMatch(TOKEN_RIGHT_PAREN)) {
+        error("Expect expression as consequent in 'if' expression.");
+    }
+
+    Value consequent = parseExpression();
+    push(consequent);
+    append(AS_PAIR(ifExpr), consequent);
+    pop();  // consequent
+
+    if (parserMatch(TOKEN_RIGHT_PAREN)) {
+        // No alternative
+        return ifExpr;
+    }
+
+    Value alternative = parseExpression();
+    push(alternative);
+    append(AS_PAIR(ifExpr), alternative);
+    pop();  // alternative
+
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' to close if statement.");
+
+    return ifExpr;
+}
+
+static Value parseOr() { return parseListOfExpressions(); }
+
+static Value parseLet() {
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'let'");
 
     Value bindings = parseListUsing(parseBindingSpec);
@@ -92,4 +121,4 @@ static Value parseBindingSpec() {
     return spec;
 }
 
-Value parseAnd() { return parseListOfExpressions(); }
+static Value parseAnd() { return parseListOfExpressions(); }

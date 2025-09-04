@@ -109,12 +109,25 @@ void push(Value value) {
     }
 
     *(vm.stackTop++) = value;
+
+#ifdef DEBUG_STACK
+    printStack();
+    puts("");
+#endif
 }
 
 Value pop() {
     // The stack should never underflow because we control it.
     assert(vm.stackTop >= vm.stack);
-    return *(--(vm.stackTop));
+
+    vm.stackTop--;
+
+#ifdef DEBUG_STACK
+    printStack();
+    puts("");
+#endif
+
+    return *vm.stackTop;
 }
 
 void freeVM() {

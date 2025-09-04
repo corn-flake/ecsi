@@ -85,8 +85,9 @@ Value parseExpression() {
             break;
         }
 
-        case TOKEN_EOF:
-            value = NIL_VAL;
+        case TOKEN_RIGHT_PAREN:
+            errorAtCurrent("Unexpected right parenthesis.");
+            parserAdvance();
             break;
 
         default:
