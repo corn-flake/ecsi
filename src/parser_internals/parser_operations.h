@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdarg.h>
 #include <stdbool.h>
 
 #include "../scanner.h"
@@ -7,13 +8,23 @@
 
 typedef Value (*ParseFn)(void);
 
-void parserAdvance();
+void formattedErrorAt(Token const *token, char const *format, ...);
+void varArgsFormattedErrorAt(Token const *token, char const *format,
+                             va_list args);
+void formattedError(char const *format, ...);
+void formattedErrorAtCurrent(char const *format, ...);
+
 void errorAt(Token const *token, char const *message);
 void error(char const *message);
 void errorAtCurrent(char const *message);
 void consume(TokenType type, char const *message);
+
+void parserAdvance();
 bool parserMatch(TokenType type);
+bool matchToken(Token const *token);
 bool check(TokenType type);
+bool checkToken(Token const *token);
+
 bool canContinueList();
 bool tokenMatchesString(Token *token, char *const string);
 bool previousTokenMatchesString(char *const string);

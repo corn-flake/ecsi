@@ -43,6 +43,7 @@ static void printFunction(ObjFunction const *function);
 static bool isList(ObjPair const *pair);
 static void printList(ObjPair const *pair);
 static void printPair(ObjPair const *pair);
+static bool objStringEqualToString(ObjString const *string, char const *chars);
 
 static void initGrowableString(GrowableString *gs) {
     gs->capacity = gs->count = 0;
@@ -546,4 +547,13 @@ ObjPair *finalPair(ObjPair *list) {
     }
 
     return list;
+}
+
+bool textOfSymbolEqualToString(ObjSymbol const *symbol, const char *string) {
+    return objStringEqualToString(symbol->text, string);
+}
+
+static bool objStringEqualToString(ObjString const *string, char const *chars) {
+    if (strlen(chars) != string->length) return false;
+    return !memcmp(chars, string->chars, string->length);
 }

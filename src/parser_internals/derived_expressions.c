@@ -13,16 +13,21 @@ static Value parseLet();
 static Value parseBindingSpec();
 static Value parseCond();
 
+/*
+  Parses a cond clause, raising an error if *foundElse
+  is true and it finds an else clause. It sets *foundElse
+  to true if it finds an else clause.
+*/
+static Value parseCondClause(bool *foundElse);
+
 ParseFn getDerivedExpressionParseFn() {
     if (!check(TOKEN_IDENTIFIER)) {
         return NULL;
     }
 
-    /*
     if (currentTokenMatchesString("cond")) {
-        return cond;
+        return parseCond;
     }
-    */
 
     if (currentTokenMatchesString("let")) {
         return parseLet;
@@ -119,4 +124,44 @@ static Value parseBindingSpec() {
     pop();  // spec
 
     return spec;
+}
+
+static Value parseCond() {
+    bool foundElse = false;
+    Value currentClause = parseCondClause(&foundElse);
+    Value clauseList = guardedCons(currentClause, NIL_VAL);
+    /*
+     We don't return here if foundElse is true because that would lead to an
+     error where duplicate else clauses are not detected if the first clause is
+     an else clause.
+    */
+
+    while (canContinueList()) {
+        currentClause = parseCondClause(&foundElse);
+        guardedAppend(clauseList, currentClause);
+    }
+
+    return clauseList;
+}
+static Value parseCondClause(bool *foundElse) {
+    consume(TOKEN_LEFT_PAREN, "Expect '(' to start cond clause.");
+    Value condition = parseExpression();
+
+    bool isElseClause =
+        IS_SYMBOL(CAR(condition)) &&
+        textOfSymbolEqualToString(AS_SYMBOL(CAR(condition)), "else");
+
+    if (*foundElse && isElseClause) {
+        // Two else clauses
+        error("You can only have one 'else' clause in a cond expression.");
+    } else if (!(*foundElse) && isElseClause) {
+        *foundElse = true;
+    }
+
+    push(condition);
+    Value consequent = parseListOfExpressions();
+    pop();  // condition
+
+    Value condClause = guardedCons(condition, consequent);
+    return condClause;
 }

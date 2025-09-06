@@ -165,6 +165,8 @@ ObjSymbol *newSymbol(char const *chars, int length);
 
 void printObject(Value value);
 
+// Utility functions
+
 void append(ObjPair *pair, Value value);
 
 // Appends elem to list, but pushes elem onto the stack first.
@@ -176,3 +178,4 @@ ObjPair *finalPair(ObjPair *pair);
 // CONS, but protects its arguments from the garbage collector.
 // It triggers the GC.
 Value guardedCons(Value car, Value cdr);
+bool textOfSymbolEqualToString(ObjSymbol const *symbol, char const *string);

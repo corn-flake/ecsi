@@ -9,17 +9,13 @@
 #include "../vm.h"
 
 static inline size_t min(size_t a, size_t b) { return a < b ? a : b; }
-static void formattedErrorAt(Token const *token, char const *format, ...);
-static void varArgsFormattedErrorAt(Token const *token, char const *format,
-                                    va_list args);
-static void formattedError(char const *format, ...);
-static void formattedErrorAtCurrent(char const *format, ...);
+static bool tokensEqual(Token const *t1, Token const *t2);
 
 void errorAt(Token const *token, char const *message) {
     formattedErrorAt(token, "%s", message);
 }
 
-static void formattedErrorAt(Token const *token, char const *format, ...) {
+void formattedErrorAt(Token const *token, char const *format, ...) {
     va_list args;
     va_start(args, format);
     varArgsFormattedErrorAt(token, format, args);
@@ -28,7 +24,7 @@ static void formattedErrorAt(Token const *token, char const *format, ...) {
 
 void error(char const *message) { errorAt(parser.previous, message); }
 
-static void formattedError(char const *format, ...) {
+void formattedError(char const *format, ...) {
     va_list args;
     va_start(args, format);
     varArgsFormattedErrorAt(parser.previous, format, args);
@@ -37,15 +33,15 @@ static void formattedError(char const *format, ...) {
 
 void errorAtCurrent(char const *message) { errorAt(parser.current, message); }
 
-static void formattedErrorAtCurrent(char const *format, ...) {
+void formattedErrorAtCurrent(char const *format, ...) {
     va_list args;
     va_start(args, format);
     varArgsFormattedErrorAt(parser.current, format, args);
     va_end(args);
 }
 
-static void varArgsFormattedErrorAt(Token const *token, char const *format,
-                                    va_list args) {
+void varArgsFormattedErrorAt(Token const *token, char const *format,
+                             va_list args) {
     if (parser.panicMode) return;
     parser.panicMode = true;
     fprintf(stderr, "[line %zu] Error", token->line);
@@ -86,6 +82,23 @@ void consume(TokenType type, char const *message) {
 
 bool check(TokenType type) { return type == parser.current->type; }
 
+bool matchToken(Token const *token) {
+    if (checkToken(token)) {
+        parserAdvance();
+        return true;
+    }
+    return false;
+}
+
+bool checkToken(Token const *token) {
+    return tokensEqual(token, parser.current);
+}
+
+static bool tokensEqual(Token const *t1, Token const *t2) {
+    return (t1->type == t2->type) && (t1->length == t2->length) &&
+           !memcmp(t1->start, t2->start, t1->length);
+}
+
 bool parserMatch(TokenType type) {
     if (!check(type)) return false;
     parserAdvance();
@@ -117,7 +130,9 @@ Value parseNExprsIntoList(ParseFn parse, int n) {
         return NIL_VAL;
     }
 
-    if (-1 == n && parserMatch(TOKEN_RIGHT_PAREN)) return NIL_VAL;
+    if (-1 == n) {
+        return parseListUsing(parse);
+    }
 
     Value expr = parse();
 
@@ -125,22 +140,15 @@ Value parseNExprsIntoList(ParseFn parse, int n) {
     // We push here to avoid pushing in every iteration before calling parse.
     push(list);
 
-    if (-1 == n) {
-        while (canContinueList()) {
-            expr = parse();
-            guardedAppend(list, expr);
+    for (int i = 1; i < n; i++) {
+        if (check(TOKEN_RIGHT_PAREN)) {
+            formattedErrorAtCurrent(
+                "Expected list of %d elements but only found %d elements.", n,
+                i);
+            break;
         }
-    } else {
-        for (int i = 1; i < n; i++) {
-            if (check(TOKEN_RIGHT_PAREN)) {
-                formattedErrorAtCurrent(
-                    "Expected list of %d elements but only found %d elements.",
-                    n, i);
-                break;
-            }
-            expr = parse();
-            guardedAppend(list, expr);
-        }
+        expr = parse();
+        guardedAppend(list, expr);
     }
 
     pop();  // list
