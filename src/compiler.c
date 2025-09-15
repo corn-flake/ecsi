@@ -142,14 +142,14 @@ static void emitConstant(Value value) {
 #define OP_CONSTANT_LONG_MAX_INDEX 16777216  // 2^24
 #define READ_BYTE(number, n) ((number >> (8 * n)) & 0xFF)
 
-    int constant_index = makeConstant(value);
-    if (constant_index < UINT8_MAX) {
-        emit2Bytes(OP_CONSTANT, (uint8_t)constant_index);
-    } else if (constant_index < OP_CONSTANT_LONG_MAX_INDEX) {
+    int constantIndex = makeConstant(value);
+    if (constantIndex < UINT8_MAX) {
+        emit2Bytes(OP_CONSTANT, (uint8_t)constantIndex);
+    } else if (constantIndex < OP_CONSTANT_LONG_MAX_INDEX) {
         emitByte(OP_CONSTANT_LONG);
-        emitByte(READ_BYTE(constant_index, 1));
-        emitByte(READ_BYTE(constant_index, 2));
-        emitByte(READ_BYTE(constant_index, 3));
+        emitByte(READ_BYTE(constantIndex, 1));
+        emitByte(READ_BYTE(constantIndex, 2));
+        emitByte(READ_BYTE(constantIndex, 3));
     } else {
         emit2Bytes(OP_CONSTANT, 0);
     }

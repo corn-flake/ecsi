@@ -36,40 +36,97 @@ static void mnemonicEscape();
 static void dotSubsequent();
 static void signSubsequent();
 static Token genericIdentifier(IdentifierVariant variant);
-static void tryToTurnIntoKeyword(Token *token);
+static TokenType keywordType(Token const *token);
+static TokenType checkKeyword(int start, int length, char const *rest,
+                              TokenType type);
 
 static inline size_t min(size_t x, size_t y) { return x > y ? x : y; }
 
 Token identifier(IdentifierVariant variant) {
     Token identifierToken = genericIdentifier(variant);
-    tryToTurnIntoKeyword(&identifierToken);
+    identifierToken.type = keywordType(&identifierToken);
     return identifierToken;
 }
 
-static Token tryToTurnIntoKeyword(Token *token) {
-    char const *rest = token->start + 1;
+static TokenType keywordType(Token const *token) {
     switch (token->start[0]) {
-        case 'l':
-        case 'c':
-        case 'i':
-        case 's':
-        case 'e':
         case 'a':
-        case 'o':
-        case 'w':
-            if (!memcmp(rest, "hen", min(token->length, 3))) {
-                token->type = TOKEN_WHEN;
-            }
-        case 'u':
-            if (!memcmp(rest, "nless", min(token->length, 5))) {
-                token->type = TOKEN_UNLESS;
-            }
+            return checkKeyword(1, 2, "nd", TOKEN_AND);
         case 'b':
-            if (!memcmp(rest, "egin", min(token->length, 4))) {
-                token->type = TOKEN_BEGIN;
+            return checkKeyword(1, 4, "egin", TOKEN_BEGIN);
+        case 'c':
+            switch (token->start[1]) {
+                case 'a':
+                    if (token->length != 11) {
+                        return checkKeyword(2, 2, "se", TOKEN_CASE);
+                    }
+                    return checkKeyword(2, 9, "se-lambda", TOKEN_CASE_LAMBDA);
+                case 'o':
+                    return checkKeyword(2, 2, "nd", TOKEN_COND);
             }
             break;
+        case 'd':
+            switch (token->length) {
+                case 2:
+                    return checkKeyword(1, 1, "o", TOKEN_DO);
+                case 5:
+                    return checkKeyword(1, 4, "elay", TOKEN_DELAY);
+                case 6:
+                    return checkKeyword(1, 5, "efine", TOKEN_DEFINE);
+                case 11:
+                    return checkKeyword(1, 10, "elay-force", TOKEN_DELAY_FORCE);
+            }
+            break;
+        case 'e':
+            return checkKeyword(1, 3, "lse", TOKEN_ELSE);
+        case 'g':
+            return checkKeyword(1, 4, "uard", TOKEN_GUARD);
+        case 'i':
+            return checkKeyword(1, 1, "f", TOKEN_IF);
+        case 'l':
+            if ('a' == token->start[1]) {
+                return checkKeyword(1, 5, "ambda", TOKEN_LAMBDA);
+            }
+
+            switch (token->length) {
+                case 3:
+                    return checkKeyword(1, 2, "et", TOKEN_LET);
+                case 6:
+                    return checkKeyword(1, 5, "etrec", TOKEN_LETREC);
+                case 7:
+                    return checkKeyword(1, 6, "etrec*", TOKEN_LETREC_STAR);
+                case 4:
+                    return checkKeyword(1, 3, "et*", TOKEN_LET_STAR);
+                case 11:
+                    return checkKeyword(1, 10, "et*-values",
+                                        TOKEN_LET_STAR_VALUES);
+                case 10:
+                    return checkKeyword(1, 9, "et-values", TOKEN_LET_VALUES);
+            }
+
+            break;
+        case 'o':
+            return checkKeyword(1, 1, "r", TOKEN_OR);
+        case 'p':
+            return checkKeyword(1, 11, "arameterize", TOKEN_PARAMETERIZE);
+        case 's':
+            return checkKeyword(1, 3, "et!", TOKEN_SET);
+        case 'u':
+            return checkKeyword(1, 5, "nless", TOKEN_UNLESS);
+        case 'w':
+            return checkKeyword(1, 3, "hen", TOKEN_WHEN);
     }
+    return TOKEN_IDENTIFIER;
+}
+
+static TokenType checkKeyword(int start, int length, char const *rest,
+                              TokenType type) {
+    if (scanner.current - scanner.start == start + length &&
+        !memcmp(scanner.start + start, rest, length)) {
+        return type;
+    }
+
+    return TOKEN_IDENTIFIER;
 }
 
 static Token genericIdentifier(IdentifierVariant variant) {

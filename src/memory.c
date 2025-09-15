@@ -36,6 +36,13 @@
 
 #define MEMORY_ALLOC_FAIL() exit(1)
 
+static void markArray(ValueArray *array);
+static void freeObject(Obj *object);
+static void markRoots();
+static void blackenObject(Obj *object);
+static void traceReferences();
+static void sweep();
+
 void *checkedMalloc(size_t size) {
     void *memory = malloc(size);
     if (NULL == memory) {
@@ -97,6 +104,17 @@ void markValue(Value value) {
     if (IS_OBJ(value)) markObject(AS_OBJ(value));
 }
 
+void freeObjects() {
+    Obj *object = vm.objects;
+    while (object != NULL) {
+        Obj *next = object->next;
+        freeObject(object);
+        object = next;
+    }
+
+    free(vm.grayStack);
+}
+
 static void markArray(ValueArray *array) {
     for (int i = 0; i < array->count; i++) {
         markValue(array->values[i]);
@@ -149,17 +167,6 @@ static void freeObject(Obj *object) {
             break;
         }
     }
-}
-
-void freeObjects() {
-    Obj *object = vm.objects;
-    while (object != NULL) {
-        Obj *next = object->next;
-        freeObject(object);
-        object = next;
-    }
-
-    free(vm.grayStack);
 }
 
 static void markRoots() {
