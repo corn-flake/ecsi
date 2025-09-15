@@ -65,12 +65,24 @@ int addConstant(Chunk *chunk, Value value) {
 }
 
 int getLine(Chunk *chunk, int offset) {
+    int entriesCount = numberOfEntries(&chunk->lines);
+    /*
+      No entries indicates no data in the chunk, and that's a
+      chunk state that getLine shouldn't be called in, so we return
+      -1 as an invalid, sentinal value.
+    */
+    if (0 == entriesCount) return -1;
+
     int counter = 0;
     int entryIndex = 0;
 
-    for (int entriesCount = numberOfEntries(&chunk->lines);
-         entryIndex < entriesCount; entryIndex++) {
-        LineNumber currentEntry = chunk->lines.lineNumbers[entryIndex];
+    // We create a variable to store this to prevent
+    // re-typing chunk->lines.lineNumbers.
+    LineNumber *entries = chunk->lines.lineNumbers;
+    LineNumber currentEntry = entries[0];
+
+    for (; entryIndex < entriesCount; entryIndex++) {
+        currentEntry = entries[entryIndex];
 
         if (counter + currentEntry.repeats >= offset) {
             return currentEntry.lineNumber;
@@ -79,7 +91,7 @@ int getLine(Chunk *chunk, int offset) {
         }
     }
 
-    return chunk->lines.lineNumbers[entryIndex].lineNumber;
+    return entries[entryIndex].lineNumber;
 }
 
 void writeConstant(Chunk *chunk, Value value, int line) {
