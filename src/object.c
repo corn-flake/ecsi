@@ -243,7 +243,7 @@ static char *objClosureToString(ObjClosure const *closure) {
 }
 
 static char *objFunctionToString(ObjFunction const *function) {
-    if (function->name == NULL) {
+    if (NULL == function->name) {
         size_t scriptStringLength = 7;
         char *scriptString = checkedMalloc(scriptStringLength + 1);
         memcpy(scriptString, "script", scriptStringLength);
@@ -451,7 +451,7 @@ void printObject(Value value) {
 }
 
 static void printFunction(ObjFunction const *function) {
-    if (function->name == NULL) {
+    if (NULL == function->name) {
         printf("<script>");
         return;
     }

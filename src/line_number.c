@@ -31,7 +31,7 @@ void initLineNumberArray(LineNumberArray *array) {
 
 int writeNumber(LineNumberArray *array, int lineNumber) {
     if (array->count > 0 &&
-        array->lineNumbers[array->count - 1].lineNumber == lineNumber) {
+        lineNumber == array->lineNumbers[array->count - 1].lineNumber) {
         array->lineNumbers[array->count - 1].repeats++;
         return array->lineNumbers[array->count - 1].lineNumber;
     }
@@ -58,7 +58,7 @@ int *decompressLineNumberArray(LineNumberArray *array) {
     size_t size = sizeof(int) * entriesCount;
 
     int *decompressed = malloc(size);
-    if (decompressed == NULL) {
+    if (NULL == decompressed) {
         fprintf(stderr, "decompressLineNumberArray: couldn't allocate memory.");
         exit(1);
     }

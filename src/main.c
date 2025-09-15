@@ -42,9 +42,9 @@ int main(int argc, char const *argv[]) {
     showStartupCopyingNotice();
     initVM();
 
-    if (argc == 1) {
+    if (1 == argc) {
         repl();
-    } else if (argc == 2) {
+    } else if (2 == argc) {
         runFile(argv[1]);
     } else {
         fprintf(stderr, "Usage: clox [path]\n");

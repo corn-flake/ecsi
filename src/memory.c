@@ -46,7 +46,7 @@ void *checkedMalloc(size_t size) {
 
 void *checkedRealloc(void *ptr, size_t newSize) {
     void *result = realloc(ptr, newSize);
-    if (result == NULL) {
+    if (NULL == result) {
         MEMORY_ALLOC_FAIL();
     }
     return result;
@@ -66,7 +66,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
         collectGarbage();
     }
 
-    if (newSize == 0) {
+    if (0 == newSize) {
         free(pointer);
         return NULL;
     }
@@ -75,7 +75,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 }
 
 void markObject(Obj *object) {
-    if (object == NULL) return;
+    if (NULL == object) return;
     if (object->isMarked) return;
 
 #ifdef DEBUG_LOG_GC
@@ -86,9 +86,8 @@ void markObject(Obj *object) {
 
     if (vm.grayCapacity < vm.grayCount + 1) {
         vm.grayCapacity = GROW_CAPACITY(vm.grayCapacity);
-        vm.grayStack =
-            (Obj **)realloc(vm.grayStack, sizeof(Obj *) * vm.grayCapacity);
-        if (vm.grayStack == NULL) exit(1);
+        vm.grayStack = (Obj **)checkedRealloc(vm.grayStack,
+                                              sizeof(Obj *) * vm.grayCapacity);
     }
     vm.grayStack[vm.grayCount++] = object;
     object->isMarked = true;

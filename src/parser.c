@@ -164,8 +164,8 @@ static void synchronize() {
     parser.panicMode = false;
 
     while (parser.current->type != TOKEN_EOF) {
-        if (parser.previous->type == TOKEN_RIGHT_PAREN) return;
-        if (parser.current->type == TOKEN_LEFT_PAREN) return;
+        if (TOKEN_RIGHT_PAREN == parser.previous->type) return;
+        if (TOKEN_LEFT_PAREN == parser.current->type) return;
         parserAdvance();
     }
 }

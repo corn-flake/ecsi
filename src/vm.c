@@ -93,7 +93,7 @@ static void runtimeError(char const *format, ...) {
         size_t instruction = frame->ip - function->chunk.code - 1;
         fprintf(stderr, "[line %d] in ",
                 getLine(&frame->closure->function->chunk, instruction));
-        if (function->name == NULL) {
+        if (NULL == function->name) {
             fprintf(stderr, "script\n");
         } else {
             fprintf(stderr, "%s()\n", function->name->chars);
@@ -315,7 +315,7 @@ static InterpretResult run() {
             case OP_RETURN: {
                 Value result = pop();
                 vm.frameCount--;
-                if (vm.frameCount == 0) {
+                if (0 == vm.frameCount) {
                     pop();
                     return INTERPRET_OK;
                 }
@@ -356,14 +356,14 @@ static ObjUpvalue *captureUpvalue(Value *local) {
         upvalue = upvalue->next;
     }
 
-    if (upvalue != NULL && upvalue->location == local) {
+    if (upvalue != NULL && local == upvalue->location) {
         return upvalue;
     }
 
     ObjUpvalue *createdUpvalue = newUpvalue(local);
     createdUpvalue->next = upvalue;
 
-    if (prevUpvalue == NULL) {
+    if (NULL == prevUpvalue) {
         vm.openUpvalues = createdUpvalue;
     } else {
         prevUpvalue->next = createdUpvalue;
@@ -399,7 +399,7 @@ static bool call(ObjClosure *closure, int argCount) {
         return false;
     }
 
-    if (vm.frameCount == FRAMES_MAX) {
+    if (FRAMES_MAX == vm.frameCount) {
         runtimeError("Stack overflow.");
         return false;
     }
@@ -419,7 +419,7 @@ static Value peek(int distance) { return vm.stackTop[-1 - distance]; }
 
 InterpretResult interpret(char const *source) {
     ObjFunction *function = compile(source);
-    if (function == NULL) return INTERPRET_COMPILE_ERROR;
+    if (NULL == function) return INTERPRET_COMPILE_ERROR;
 
     push(OBJ_VAL(function));
     ObjClosure *closure = newClosure(function);
