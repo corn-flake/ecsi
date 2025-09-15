@@ -1,0 +1,22 @@
+#include "../src/vm.h"
+#include "../unity/src/unity.h"
+
+void setUp() { initVM(); }
+void tearDown() { freeVM(); }
+
+void test_pop() {
+    Value cases[5] = {
+	NIL_VAL,
+	NUMBER_VAL(5),
+	
+    };
+}
+
+void test_push() {}
+
+void test_interpret() {}
+
+int main() {
+    UNITY_BEGIN();
+    return UNITY_END();
+}

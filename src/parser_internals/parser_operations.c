@@ -1,3 +1,21 @@
+/*
+  Copyright 2025 Evan Cooney
+
+  This file is part of Ecsi.
+
+  Ecsi is free software: you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation, either version 3 of the License, or (at your option) any later
+  version.
+
+  Ecsi is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along with
+  Ecsi. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "parser_operations.h"
 
 #include <stdarg.h>
@@ -94,6 +112,8 @@ bool checkToken(Token const *token) {
     return tokensEqual(token, parser.current);
 }
 
+bool parserIsAtEnd() { return check(TOKEN_EOF); }
+
 static bool tokensEqual(Token const *t1, Token const *t2) {
     return (t1->type == t2->type) && (t1->length == t2->length) &&
            !memcmp(t1->start, t2->start, t1->length);
@@ -130,8 +150,19 @@ Value parseNExprsIntoList(ParseFn parse, int n) {
         return NIL_VAL;
     }
 
-    if (-1 == n) {
-        return parseListUsing(parse);
+    if (!canContinueList()) {
+        if (parserMatch(TOKEN_RIGHT_PAREN)) {
+            if (-1 != n) {
+                formattedErrorAtCurrent(
+                    "Expected list of %d elements but didn't find any "
+                    "elements.",
+                    n);
+            }
+            return NIL_VAL;
+        }
+
+        errorAtCurrent("Expect ')' to close list.");
+        return NIL_VAL;
     }
 
     Value expr = parse();
@@ -140,15 +171,22 @@ Value parseNExprsIntoList(ParseFn parse, int n) {
     // We push here to avoid pushing in every iteration before calling parse.
     push(list);
 
-    for (int i = 1; i < n; i++) {
-        if (check(TOKEN_RIGHT_PAREN)) {
-            formattedErrorAtCurrent(
-                "Expected list of %d elements but only found %d elements.", n,
-                i);
-            break;
+    if (-1 == n) {
+        while (canContinueList()) {
+            expr = parse();
+            guardedAppend(list, expr);
         }
-        expr = parse();
-        guardedAppend(list, expr);
+    } else {
+        for (int i = 1; i < n; i++) {
+            if (check(TOKEN_RIGHT_PAREN)) {
+                formattedErrorAtCurrent(
+                    "Expected list of %d elements but only found %d elements.",
+                    n, i);
+                break;
+            }
+            expr = parse();
+            guardedAppend(list, expr);
+        }
     }
 
     pop();  // list
@@ -157,6 +195,42 @@ Value parseNExprsIntoList(ParseFn parse, int n) {
     return list;
 }
 
-Value parseListOfExpressions() { return parseListUsing(parseExpression); }
+Value parseAtLeastNExprsUsing(ParseFn parse, size_t n) {
+    if (0 == n && parserMatch(TOKEN_RIGHT_PAREN)) {
+        return NIL_VAL;
+    }
 
-Value parseListOfDatums() { return parseListUsing(parseDatum); }
+    // At this point we know there is at least one expression to parse,
+    // so it is safe to call parse. Even if the user expects 0, it's fine.
+    Value expr = parse();
+    Value list = guardedCons(expr, NIL_VAL);
+    size_t exprsParsed = 1;
+
+    push(list);
+    for (; exprsParsed < n && canContinueList(); exprsParsed++) {
+        expr = parse();
+        append(AS_PAIR(list), expr);
+    }
+    pop();  // list
+
+    // Not enough exprs
+    if (exprsParsed < n) {
+        formattedErrorAtCurrent(
+            "Expected at least %d expressions but only found %d", n,
+            exprsParsed);
+        return list;
+    }
+
+    push(list);
+    while (canContinueList()) {
+        expr = parse();
+        append(AS_PAIR(list), expr);
+    }
+    pop();  // list
+
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' to close list.");
+
+    return list;
+}
+
+Value parseListOfExpressions() { return parseListUsing(parseExpression); }

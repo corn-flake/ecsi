@@ -1,3 +1,21 @@
+/*
+  Copyright 2025 Evan Cooney
+
+  This file is part of Ecsi.
+
+  Ecsi is free software: you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation, either version 3 of the License, or (at your option) any later
+  version.
+
+  Ecsi is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along with
+  Ecsi. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "identifier.h"
 
 #include <assert.h>
@@ -10,45 +28,85 @@
 #include "hexadecimal.h"
 #include "scanner_operations.h"
 
-static void subsequents() {
+static void subsequents();
+static void symbolElement();
+static bool atInlineHexEscape();
+static bool atMnemonicEscape();
+static void mnemonicEscape();
+static void dotSubsequent();
+static void signSubsequent();
+static Token genericIdentifier(IdentifierVariant variant);
+static void tryToTurnIntoKeyword(Token *token);
+
+static inline size_t min(size_t x, size_t y) { return x > y ? x : y; }
+
+Token identifier(IdentifierVariant variant) {
+    Token identifierToken = genericIdentifier(variant);
+    tryToTurnIntoKeyword(&identifierToken);
+    return identifierToken;
+}
+
+static Token tryToTurnIntoKeyword(Token *token) {
+    char const *rest = token->start + 1;
+    switch (token->start[0]) {
+        case 'l':
+        case 'c':
+        case 'i':
+        case 's':
+        case 'e':
+        case 'a':
+        case 'o':
+        case 'w':
+            if (!memcmp(rest, "hen", min(token->length, 3))) {
+                token->type = TOKEN_WHEN;
+            }
+        case 'u':
+            if (!memcmp(rest, "nless", min(token->length, 5))) {
+                token->type = TOKEN_UNLESS;
+            }
+        case 'b':
+            if (!memcmp(rest, "egin", min(token->length, 4))) {
+                token->type = TOKEN_BEGIN;
+            }
+            break;
+    }
+}
+
+static Token genericIdentifier(IdentifierVariant variant) {
+    if (IDENTIFIER_STARTS_WITH_VERTICAL_LINE == variant) {
+        while ('|' != peek()) {
+            symbolElement();
+        }
+        advance();
+        return makeToken(TOKEN_IDENTIFIER);
+    }
+
     while (isSubsequent(peek())) {
         advance();
     }
+
+    return makeToken(TOKEN_IDENTIFIER);
 }
 
-static void dotSubsequent() {
-    if (!isDotSubsequent(peek())) errorToken("Expected a dot subsequent.");
-    advance();
-}
-
-static void signSubsequent() {
-    if (!isSignSubsequent(peek())) errorToken("Expected a sign subsequent.");
-    advance();
-}
-
-Token peculiarIdentifier(IdentifierVariant variant) {
-    if (IDENTIFIER_PECULIAR_STARTS_WITH_DOT == variant) dotSubsequent();
-
-    // The identifier is only one explicit sign, like '+'.
-    if (!isSignSubsequent(peek()) && '.' != peek())
-        return makeToken(TOKEN_IDENTIFIER);
-
-    if (isSignSubsequent(peek())) {
-        // Read the sign subsequent.
-        signSubsequent();
-        subsequents();
-        return makeToken(TOKEN_IDENTIFIER);
+static void symbolElement() {
+    if ('|' != peek() && '\\' != peek()) {
+        advance();
+        return;
     }
 
-    if ('.' == peek()) {
-        dotSubsequent();
-        subsequents();
-        return makeToken(TOKEN_IDENTIFIER);
+    if (atInlineHexEscape()) {
+        inlineHexEscape();
+        return;
     }
 
-    // Unreached.
-    fprintf(stderr, "Should not reach here in peculiarIdentifier.\n");
-    assert(false);
+    if (atMnemonicEscape()) {
+        mnemonicEscape();
+        return;
+    }
+}
+
+static bool atInlineHexEscape() {
+    return !('\\' == peek() && 'x' == peekNext());
 }
 
 static bool atMnemonicEscape() {
@@ -71,39 +129,46 @@ static void mnemonicEscape() {
     advance();
 }
 
-static bool atInlineHexEscape() {
-    return !('\\' == peek() && 'x' == peekNext());
-}
+Token peculiarIdentifier(IdentifierVariant variant) {
+    if (IDENTIFIER_PECULIAR_STARTS_WITH_DOT == variant) dotSubsequent();
 
-static void symbolElement() {
-    if ('|' != peek() && '\\' != peek()) {
-        advance();
-        return;
-    }
-
-    if (atInlineHexEscape()) {
-        inlineHexEscape();
-        return;
-    }
-
-    if (atMnemonicEscape()) {
-        mnemonicEscape();
-        return;
-    }
-}
-
-Token identifier(IdentifierVariant variant) {
-    if (IDENTIFIER_STARTS_WITH_VERTICAL_LINE == variant) {
-        while ('|' != peek()) {
-            symbolElement();
-        }
-        advance();
+    // The identifier is only one explicit sign, like '+'.
+    if (!isSignSubsequent(peek()) && '.' != peek()) {
         return makeToken(TOKEN_IDENTIFIER);
     }
 
+    if (isSignSubsequent(peek())) {
+        // Read the sign subsequent.
+        signSubsequent();
+        subsequents();
+        return makeToken(TOKEN_IDENTIFIER);
+    }
+
+    if ('.' == peek()) {
+        dotSubsequent();
+        subsequents();
+        return makeToken(TOKEN_IDENTIFIER);
+    }
+
+    // Unreached.
+    fprintf(stderr, "Should not reach here in peculiarIdentifier.\n");
+    assert(false);
+}
+
+static void signSubsequent() {
+    if (!isSignSubsequent(peek())) errorToken("Expected a sign subsequent.");
+    advance();
+}
+
+static void dotSubsequent() {
+    if (!isDotSubsequent(peek())) {
+        errorToken("Expected a dot subsequent.");
+    }
+    advance();
+}
+
+static void subsequents() {
     while (isSubsequent(peek())) {
         advance();
     }
-
-    return makeToken(TOKEN_IDENTIFIER);
 }

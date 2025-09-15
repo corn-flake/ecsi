@@ -1,3 +1,21 @@
+/*
+  Copyright 2025 Evan Cooney
+
+  This file is part of Ecsi.
+
+  Ecsi is free software: you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation, either version 3 of the License, or (at your option) any later
+  version.
+
+  Ecsi is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along with
+  Ecsi. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "parser.h"
 
 #include <assert.h>
@@ -19,6 +37,7 @@
 Parser parser;
 
 static void appendToAst(Value value);
+static void synchronize();
 static Value parseListBasedExpression();
 static Value parseQuotation();
 
@@ -95,6 +114,7 @@ Value parseExpression() {
                     tokenTypeToString(parser.current->type));
     }
 
+    if (parser.panicMode) synchronize();
     return value;
 }
 
@@ -132,60 +152,20 @@ static Value parseQuotation() {
     return list;
 }
 
-Value parseDatum() {
-    Value value = NIL_VAL;
-
-    switch (parser.current->type) {
-            // Simple datums.
-        case TOKEN_BOOLEAN:
-            value = parseBooleanNoCheck();
-            break;
-        case TOKEN_NUMBER:
-            value = parseNumberNoCheck();
-            break;
-        case TOKEN_CHARACTER:
-            value = parseCharacterNoCheck();
-            break;
-        case TOKEN_STRING:
-            value = parseStringNoCheck();
-            break;
-        case TOKEN_IDENTIFIER:
-            value = symbol();
-            parserAdvance();
-            break;
-        case TOKEN_POUND_U8_LEFT_PAREN:
-            value = parseBytevector();
-            break;
-
-            // Compound datums.
-        case TOKEN_LEFT_PAREN:
-            // Consume the '('
-            parserAdvance();
-            value = parseListOfDatums();
-            break;
-        case TOKEN_POUND_LEFT_PAREN:
-            // Consume the '#('
-            parserAdvance();
-            value = parseVectorUsing(parseDatum);
-            break;
-        case TOKEN_QUOTE:
-        case TOKEN_BACKQUOTE:
-        case TOKEN_COMMA:
-        case TOKEN_COMMA_AT:
-            parserAdvance();
-            value = parseDatum();
-            break;
-        default:
-            value = NIL_VAL;
-    }
-
-    return value;
-}
-
 static void appendToAst(Value value) {
     if (IS_NIL(parser.ast)) {
         parser.ast = guardedCons(value, NIL_VAL);
     } else {
         guardedAppend(parser.ast, value);
+    }
+}
+
+static void synchronize() {
+    parser.panicMode = false;
+
+    while (parser.current->type != TOKEN_EOF) {
+        if (parser.previous->type == TOKEN_RIGHT_PAREN) return;
+        if (parser.current->type == TOKEN_LEFT_PAREN) return;
+        parserAdvance();
     }
 }

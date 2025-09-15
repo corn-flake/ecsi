@@ -1,3 +1,23 @@
+
+/*
+  Copyright 2025 Evan Cooney
+  Copyright 2015-2020 Robert Nystrom
+
+  This file is part of Ecsi.
+
+  Ecsi is free software: you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation, either version 3 of the License, or (at your option) any later
+  version.
+
+  Ecsi is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along with
+  Ecsi. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "object.h"
 
 #include <assert.h>
@@ -554,6 +574,6 @@ bool textOfSymbolEqualToString(ObjSymbol const *symbol, const char *string) {
 }
 
 static bool objStringEqualToString(ObjString const *string, char const *chars) {
-    if (strlen(chars) != string->length) return false;
+    if (strlen(chars) != (size_t)string->length) return false;
     return !memcmp(chars, string->chars, string->length);
 }

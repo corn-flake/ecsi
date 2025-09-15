@@ -1,3 +1,22 @@
+/*
+  Copyright 2025 Evan Cooney
+  Copyright 2015-2020 Robert Nystrom
+
+  This file is part of Ecsi.
+
+  Ecsi is free software: you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation, either version 3 of the License, or (at your option) any later
+  version.
+
+  Ecsi is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along with
+  Ecsi. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "compiler.h"
 
 #include <stdint.h>
@@ -11,6 +30,7 @@
 #include "object.h"
 #include "parser.h"
 #include "scanner.h"
+#include "value.h"
 
 #ifdef DEBUG_PRINT_CODE
 #include "debug.h"
@@ -36,6 +56,20 @@ typedef enum {
     TYPE_SCRIPT,
 } FunctionType;
 
+typedef enum {
+    EXPR_IF,
+    EXPR_AND,
+    EXPR_OR,
+    EXPR_LET,
+    EXPR_COND,
+    EXPR_DEFINE,
+    EXPR_WHEN,
+    EXPR_UNLESS,
+    EXPR_LAMBDA,
+    EXPR_BEGIN,
+    EXPR_CALL,
+} ExpressionType;
+
 typedef struct Compiler {
     struct Compiler *enclosing;
     ObjFunction *function;
@@ -45,6 +79,8 @@ typedef struct Compiler {
     int localCount;
     Upvalue upvalues[UINT8_COUNT];
     int scopeDepth;
+
+    Value ast;
 } Compiler;
 
 typedef struct ClassCompiler {
@@ -57,42 +93,20 @@ ClassCompiler *currentClass = NULL;
 
 Chunk *compilingChunk;
 
+static ExpressionType currentExpressionType();
+
 static Chunk *currentChunk() { return &current->function->chunk; }
 
-/*
-static void consume(TokenType type, const char *message) {
-  if (parser.current->type == type) {
-    parserAdvance();
-    return;
-  }
-  errorAtCurrent(message);
-}
-
-static bool check(TokenType type) { return parser.current->type == type; }
-
-static bool parserMatch(TokenType type) {
-  if (!check(type)) return false;
-  parserAdvance();
-  return true;
-}
-
-static bool parserMatchString(const char *string) {
-  if (parser.current->length != strlen(string)) return false;
-  if (memcmp(parser.current->start, string, parser.current->length))
-    return false;
-  parserAdvance();
-  return true;
-}
-
 static void emitByte(uint8_t byte) {
-  writeChunk(currentChunk(), byte, parser.previous->line);
+    writeChunk(currentChunk(), byte, parser.previous->line);
 }
 
 static void emit2Bytes(uint8_t byte1, uint8_t byte2) {
-  emitByte(byte1);
-  emitByte(byte2);
+    emitByte(byte1);
+    emitByte(byte2);
 }
 
+/*
 static void emitLoop(int loopStart) {
   emitByte(OP_LOOP);
 
@@ -102,60 +116,63 @@ static void emitLoop(int loopStart) {
   emitByte((offset >> 8) & 0xff);
   emitByte(offset & 0xff);
 }
+*/
 
 static int emitJump(uint8_t instruction) {
-  emitByte(instruction);
-  emitByte(0xff);
-  emitByte(0xff);
-  return currentChunk()->count - 2;
+    emitByte(instruction);
+    emitByte(0xff);
+    emitByte(0xff);
+    return currentChunk()->count - 2;
 }
 
 static void emitReturn() {
-  if (current->type == TYPE_INITIALIZER) {
-    emit2Bytes(OP_GET_LOCAL, 0);
-  } else {
-    emitByte(OP_NIL);
-  }
-  emitByte(OP_RETURN);
+    if (current->type == TYPE_INITIALIZER) {
+        emit2Bytes(OP_GET_LOCAL, 0);
+    } else {
+        emitByte(OP_NIL);
+    }
+    emitByte(OP_RETURN);
 }
 
 static int makeConstant(Value value) {
-  return addConstant(currentChunk(), value);
+    return addConstant(currentChunk(), value);
 }
 
 static void emitConstant(Value value) {
 #define OP_CONSTANT_LONG_MAX_INDEX 16777216  // 2^24
 #define READ_BYTE(number, n) ((number >> (8 * n)) & 0xFF)
 
-  int constant_index = makeConstant(value);
-  if (constant_index < UINT8_MAX) {
-    emit2Bytes(OP_CONSTANT, (uint8_t)constant_index);
-  } else if (constant_index < OP_CONSTANT_LONG_MAX_INDEX) {
-    emitByte(OP_CONSTANT_LONG);
-    emitByte(READ_BYTE(constant_index, 1));
-    emitByte(READ_BYTE(constant_index, 2));
-    emitByte(READ_BYTE(constant_index, 3));
-  } else {
-    emit2Bytes(OP_CONSTANT, 0);
-  }
+    int constant_index = makeConstant(value);
+    if (constant_index < UINT8_MAX) {
+        emit2Bytes(OP_CONSTANT, (uint8_t)constant_index);
+    } else if (constant_index < OP_CONSTANT_LONG_MAX_INDEX) {
+        emitByte(OP_CONSTANT_LONG);
+        emitByte(READ_BYTE(constant_index, 1));
+        emitByte(READ_BYTE(constant_index, 2));
+        emitByte(READ_BYTE(constant_index, 3));
+    } else {
+        emit2Bytes(OP_CONSTANT, 0);
+    }
 
 #undef OP_CONSTANT_LONG_MAX_INDEX
 #undef READ_BYTE
 }
 
+/*
 static void patchJump(int offset) {
-  // -2 to adjust for the bytecode for the jump offset itself
-  int jump = currentChunk()->count - offset - 2;
+    // -2 to adjust for the bytecode for the jump offset itself
+    int jump = currentChunk()->count - offset - 2;
 
-  if (jump > UINT16_MAX) {
-    error("Too much code to jump over.");
-  }
+    if (jump > UINT16_MAX) {
+        error("Too much code to jump over.");
+    }
 
-  currentChunk()->code[offset] = (jump >> 8) & 0xff;
-  currentChunk()->code[offset + 1] = jump & 0xff;
+    currentChunk()->code[offset] = (jump >> 8) & 0xff;
+    currentChunk()->code[offset + 1] = jump & 0xff;
 }
 */
-static void initCompiler(Compiler *compiler, FunctionType type) {
+
+static void initCompiler(Compiler *compiler, FunctionType type, Value ast) {
     compiler->enclosing = current;
     compiler->function = NULL;
     compiler->type = type;
@@ -178,40 +195,42 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
         local->name.start = "";
         local->name.length = 0;
     }
+
+    compiler->ast = ast;
 }
 
-/*
-
 static ObjFunction *endCompiler() {
-  emitReturn();
-  ObjFunction *function = current->function;
+    emitReturn();
+    ObjFunction *function = current->function;
 
 #ifdef DEBUG_PRINT_CODE
-  if (!parser.hadError) {
-    disassembleChunk(currentChunk(), function->name != NULL
-                                         ? function->name->chars
-                                         : "<script>");
-  }
+    if (!parser.hadError) {
+        disassembleChunk(currentChunk(), function->name != NULL
+                                             ? function->name->chars
+                                             : "<script>");
+    }
 #endif
 
-  current = current->enclosing;
-  return function;
+    current = current->enclosing;
+    return function;
 }
 
 static void beginScope() { current->scopeDepth++; }
 
 static void endScope() {
-  current->scopeDepth--;
-  while (current->localCount > 0 &&
-         current->locals[current->localCount - 1].depth > current->scopeDepth) {
-    if (current->locals[current->localCount - 1].isCaptured) {
-      emitByte(OP_CLOSE_UPVALUE);
-    } else {
-      emitByte(OP_POP);
+    current->scopeDepth--;
+    while (current->localCount > 0 &&
+           current->locals[current->localCount - 1].depth >
+               current->scopeDepth) {
+        if (current->locals[current->localCount - 1].isCaptured) {
+            emitByte(OP_CLOSE_UPVALUE);
+        } else {
+            emitByte(OP_POP);
+        }
+        current->localCount--;
     }
-    current->localCount--;
-  }
 }
+/*
 
 static uint8_t argumentList() {
   uint8_t argCount = 0;
@@ -497,19 +516,16 @@ static void funDeclaration() {
 }
 */
 
-/*
 static void expression() {
-  if (parserMatchString("lambda")) {
-    lambdaExpression();
-  } else if (parserMatch(TOKEN_VAR)) {
-    varDeclaration();
-  } else {
-    statement();
-  }
-
-  if (parser.panicMode) synchronize();
+    switch (currentExpressionType()) {
+        case EXPR_CALL:
+            return;
+        default:
+            return;
+    }
 }
-*/
+
+static ExpressionType currentExpressionType() { return EXPR_CALL; }
 
 /*
 static void statement() {
@@ -553,14 +569,23 @@ ObjFunction *compile(char const *source) {
     scanAllTokensInto(&tokens);
 
     initParser(tokens);
-    printValue(parseAllTokens());
-    puts("");
+
+    Value allTokens = parseAllTokens();
+
+    if (!parser.hadError) {
+        printValue(allTokens);
+        puts("");
+    } else {
+        puts("Not printing ast, parser had error.");
+        return NULL;
+    }
+
     freeTokenArray(&tokens);
 
-    /*
     Compiler compiler;
-    initCompiler(&compiler, TYPE_SCRIPT);
+    initCompiler(&compiler, TYPE_SCRIPT, parser.ast);
 
+    /*
     parser.hadError = false;
     parser.panicMode = false;
 

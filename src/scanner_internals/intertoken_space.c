@@ -1,3 +1,22 @@
+
+/*
+  Copyright 2025 Evan Cooney
+
+  This file is part of Ecsi.
+
+  Ecsi is free software: you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation, either version 3 of the License, or (at your option) any later
+  version.
+
+  Ecsi is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along with
+  Ecsi. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "intertoken_space.h"
 
 #include <stdbool.h>
@@ -7,54 +26,54 @@
 #include "scanner_operations.h"
 
 static bool skipLineEndings() {
-  bool skippedAnything = false;
-  while (peek() == '\n' || peek() == '\r') {
-    scanner.line++;
-    advance();
-    if (!skippedAnything) skippedAnything = true;
-  }
-  return skippedAnything;
+    bool skippedAnything = false;
+    while (peek() == '\n' || peek() == '\r') {
+        scanner.line++;
+        advance();
+        if (!skippedAnything) skippedAnything = true;
+    }
+    return skippedAnything;
 }
 
 static bool skipIntralineWhitespace() {
-  bool skippedAnything = false;
-  while (isIntralineWhitespace(peek())) {
-    advance();
-    if (!skippedAnything) skippedAnything = true;
-  }
-  return skippedAnything;
+    bool skippedAnything = false;
+    while (isIntralineWhitespace(peek())) {
+        advance();
+        if (!skippedAnything) skippedAnything = true;
+    }
+    return skippedAnything;
 }
 
 static bool skipWhitespace() {
-  bool skippedAnything = false;
-  bool skipped;
+    bool skippedAnything = false;
+    bool skipped;
 
-  do {
-    skipped = false;
-    if (skipIntralineWhitespace()) {
-      skippedAnything = true;
-      skipped = true;
-    }
-    if (skipLineEndings()) {
-      skippedAnything = true;
-      skipped = true;
-    }
-  } while (skipped);
+    do {
+        skipped = false;
+        if (skipIntralineWhitespace()) {
+            skippedAnything = true;
+            skipped = true;
+        }
+        if (skipLineEndings()) {
+            skippedAnything = true;
+            skipped = true;
+        }
+    } while (skipped);
 
-  return skippedAnything;
+    return skippedAnything;
 }
 
 static bool at_start_of_nested_comment() {
-  return peek() == '#' && peekNext() == '|';
+    return peek() == '#' && peekNext() == '|';
 }
 
 static bool at_end_of_nested_comment() {
-  return peek() == '|' && peekNext() == '#';
+    return peek() == '|' && peekNext() == '#';
 }
 
 static void skipNestedComment_text() {
-  while (!at_end_of_nested_comment() && !at_start_of_nested_comment())
-    advance();
+    while (!at_end_of_nested_comment() && !at_start_of_nested_comment())
+        advance();
 }
 
 /*
@@ -64,45 +83,45 @@ static void skipNestedComment_text() {
 static void skipNestedComment_conts();
 
 static bool skipNestedComment() {
-  if (at_start_of_nested_comment()) {
-    // Skip the start of the comment.
-    advance();
-    advance();
+    if (at_start_of_nested_comment()) {
+        // Skip the start of the comment.
+        advance();
+        advance();
 
-    // Skip the middle of the comment.
-    skipNestedComment_text();
-    skipNestedComment_conts();
+        // Skip the middle of the comment.
+        skipNestedComment_text();
+        skipNestedComment_conts();
 
-    // Skip the end of the comment.
-    advance();
-    advance();
+        // Skip the end of the comment.
+        advance();
+        advance();
 
-    return true;
-  }
+        return true;
+    }
 
-  return false;
+    return false;
 }
 
 static void skipNestedComment_conts() {
-  skipNestedComment();
-  skipNestedComment_text();
+    skipNestedComment();
+    skipNestedComment_text();
 }
 
 static bool skipLineComment() {
-  if (peek() == ';') {
-    while (peek() != '\n' && peek() != '\r') advance();
+    if (peek() == ';') {
+        while (peek() != '\n' && peek() != '\r') advance();
 
-    /*
-      If the file has "\r\n" line endings, the while loop
-      will stop advancing after the '\r', but the '\n' still has to
-      be skipped, so we skip it here.
-    */
-    if (peek() == '\n') advance();
+        /*
+          If the file has "\r\n" line endings, the while loop
+          will stop advancing after the '\r', but the '\n' still has to
+          be skipped, so we skip it here.
+        */
+        if (peek() == '\n') advance();
 
-    return true;
-  }
+        return true;
+    }
 
-  return false;
+    return false;
 }
 
 /*
@@ -130,16 +149,16 @@ skip_datum_comment ()
 */
 
 static bool skipComment() {
-  if (skipLineComment()) return true;
+    if (skipLineComment()) return true;
 
-  if (skipNestedComment()) return true;
+    if (skipNestedComment()) return true;
 
-  /*
-  if (skip_datum_comment ())
-    return true;
-  */
+    /*
+    if (skip_datum_comment ())
+      return true;
+    */
 
-  return false;
+    return false;
 }
 
 /*
@@ -158,16 +177,16 @@ directive ()
 */
 
 static bool skipAtmosphere() {
-  if (skipWhitespace()) return true;
+    if (skipWhitespace()) return true;
 
-  if (skipComment()) return true;
+    if (skipComment()) return true;
 
-  /*
-  if (directive ())
-    return true;
-  */
+    /*
+    if (directive ())
+      return true;
+    */
 
-  return false;
+    return false;
 }
 
 void skipIntertokenSpace() { while (skipAtmosphere()); }
