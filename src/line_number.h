@@ -18,19 +18,40 @@
 
 #pragma once
 
+// An run-length encoded line number.
 typedef struct {
-    int lineNumber;
-    int repeats;
+    int lineNumber;  // The line number
+    int repeats;     // The number of times the number repeats.
 } LineNumber;
 
 typedef struct {
-    int count;
-    int capacity;
-    LineNumber *lineNumbers;
+    int count;     // The number of used elements in lineNumbers.
+    int capacity;  // The number of available elements in lineNumbers.
+    LineNumber *lineNumbers;  // An array of lineNumbers.
 } LineNumberArray;
 
+// Initialize the LineNumberArray pointed to by array.
 void initLineNumberArray(LineNumberArray *array);
+
+/*
+  Free data associated with array, and re-initialize it.
+  It does not free array, so it is safe to use on stack allocated
+  memory.
+ */
 void freeLineNumberArray(LineNumberArray *array);
+
+/*
+  Append lineNumber to array.
+ */
 int writeNumber(LineNumberArray *array, int lineNumber);
+
+/*
+  Decompress array into a normal, heap-allocated array of integers,
+  and return a pointer to that array.
+ */
 int *decompressLineNumberArray(LineNumberArray *array);
+
+/*
+  Return the number of entries in array.
+ */
 int numberOfEntries(LineNumberArray *array);

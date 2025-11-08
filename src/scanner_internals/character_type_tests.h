@@ -22,28 +22,30 @@
 
 #include "../common.h"
 
-/*
-  The R7RS Standard specifies that hex digits are only lowercase,
-  but I'd like to give users the option to use uppercase.
-  If ALLOW_UPPERCASE_HEX is defined in common.h,
-  isHexDigit is just a macro for isxdigit which counts uppercase.
-  Otherwise, it's a custom function which doesn't.
- */
-#ifdef ALLOW_UPPERCASE_HEX
-#define isHexDigit(c) (bool)isxdigit(c)
-#else
-bool isHexDigit(char c);
-#endif
-
+// Determine whether c is a "special inital" character (see R7Rs standard).
 bool isSpecialInitial(char c);
+
+// Determine whether c is an "initial" character (see R7Rs standard).
 bool isInitial(char c);
 
 /*
   Returns true if c is '+' or '-', otherwise returns false.
+  This is the definition of an "explicit sign" character in the
+  R7Rs standard.
  */
 bool isExplicitSign(char c);
+
+// Determine whether c is a "special subsequent" (see R7Rs standard).
 bool isSpecialSubsequent(char c);
+
+// Determine whether c is a "subsequent" (see R7Rs standard).
 bool isSubsequent(char c);
+
+// Determine whether c is a "sign subsequent" (see R7Rs standard).
 bool isSignSubsequent(char c);
+
+// Determine whether c is a "dot subsequent" (see R7Rs standard).
 bool isDotSubsequent(char c);
+
+// Determine whether c is an "intraline whitespace" (see R7Rs standard).
 bool isIntralineWhitespace(char c);

@@ -35,6 +35,12 @@
 
 Scanner scanner;
 
+// Scan and return a number token.
+static Token number(void);
+
+// Scan and return a string token.
+static Token string(void);
+
 char const *tokenTypeToString(TokenType type) {
     switch (type) {
         case TOKEN_IDENTIFIER:
@@ -75,17 +81,17 @@ char const *tokenTypeToString(TokenType type) {
     }
 }
 
-void printToken(Token *token) {
+void printToken(Token const *token) {
     printf("Token { .type = %s, .start = '%.*s', .line = %zu }\n",
            tokenTypeToString(token->type), (int)token->length, token->start,
            token->line);
 }
 
-ObjString *tokenToObjString(Token *token) {
+ObjString *tokenToObjString(Token const *token) {
     return copyString(token->start, token->length);
 }
 
-ObjSymbol *tokenToObjSymbol(Token *token) {
+ObjSymbol *tokenToObjSymbol(Token const *token) {
     return newSymbol(token->start, token->length);
 }
 
@@ -118,13 +124,13 @@ void initScanner(char const *source) {
     scanner.line = 1;
 }
 
-static Token number() {
+static Token number(void) {
     while (isdigit(peek())) advance();
 
     return makeToken(TOKEN_NUMBER);
 }
 
-static Token string() {
+static Token string(void) {
     while (peek() != '"' && !isAtEnd()) {
         if ('\n' == peek()) scanner.line++;
         advance();
@@ -137,7 +143,7 @@ static Token string() {
     return makeToken(TOKEN_STRING);
 }
 
-Token scanToken() {
+Token scanToken(void) {
     skipIntertokenSpace();
     scanner.start = scanner.current;
 
@@ -189,14 +195,4 @@ void scanAllTokensInto(TokenArray *tokenArray) {
         token = scanToken();
         addToken(tokenArray, token);
     } while (TOKEN_EOF != token.type);
-
-    /*
-    Token token = scanToken();
-    while (token.type != TOKEN_EOF) {
-        addToken(tokenArray, token);
-        token = scanToken();
-    }
-    // Add EOF token
-    addToken(tokenArray, token);
-    */
 }

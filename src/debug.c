@@ -27,12 +27,42 @@
 #include "object.h"
 #include "value.h"
 
+/*
+  Prints name with a new line after it and returns the index of the next
+  instruction. Used for instructions that take no operands.
+ */
 static int simpleInstruction(char const *name, int offset);
+
+/*
+  Prints name left-aligned in a 16 character field, and operand right-aligned
+  in a 4 character field, then a single space character.
+ */
+static void printInstructionNameAndOperand(char const *name, uint8_t operand);
+
+/*
+  Prints the 2-byte instruction at offset in chunk, labeling it as name, and
+  return the offset of the next instruction.
+ */
 static int byteInstruction(char const *name, Chunk const *chunk, int offset);
+
+/*
+  Prints a jump instruction, where it jumps to, and returns the offset of the
+  next instruction.
+ */
 static int jumpInstruction(char const *name, int sign, Chunk const *chunk,
                            int offset);
+
+/*
+  Prints an instruction that refers to a constant with an 1 byte operand, and
+  return the offset of the next operand.
+ */
 static int constantInstruction(char const *name, Chunk const *chunk,
                                int offset);
+
+/*
+  Prints an instruction with op code OP_CONSTANT_LONG, and returns
+  the offset of the next instruction.
+ */
 static int constantLongInstruction(char const *name, Chunk const *chunk,
                                    int offset);
 
@@ -90,9 +120,9 @@ int disassembleInstruction(Chunk *const chunk, int offset) {
         case OP_CLOSURE: {
             offset++;
             uint8_t constant = chunk->code[offset++];
-            printf("%-16s %4d ", "OP_CLOSURE", constant);
+            printInstructionNameAndOperand("OP_CLOSURE", constant);
             printValue(chunk->constants.values[constant]);
-            printf("\n");
+            puts("");
 
             ObjFunction *function =
                 AS_FUNCTION(chunk->constants.values[constant]);
@@ -113,13 +143,18 @@ int disassembleInstruction(Chunk *const chunk, int offset) {
 }
 
 static int simpleInstruction(const char *name, int offset) {
-    printf("%s\n", name);
+    puts(name);
     return offset + 1;
+}
+
+static void printInstructionNameAndOperand(char const *name, uint8_t operand) {
+    printf("%-16s %4d ", name, operand);
 }
 
 static int byteInstruction(const char *name, Chunk const *chunk, int offset) {
     uint8_t slot = chunk->code[offset + 1];
-    printf("%-16s %4d\n", name, slot);
+    printInstructionNameAndOperand(name, slot);
+    puts("");
     return offset + 2;
 }
 
@@ -127,16 +162,18 @@ static int jumpInstruction(const char *name, int sign, Chunk const *chunk,
                            int offset) {
     uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
     jump |= chunk->code[offset + 2];
-    printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
+    printInstructionNameAndOperand(name, offset);
+    printf("-> %d\n", offset + 3 + sign * jump);
     return offset + 3;
 }
 
 static int constantInstruction(const char *name, Chunk const *chunk,
                                int offset) {
     uint8_t constant = chunk->code[offset + 1];
-    printf("%-16s %4d '", name, constant);
+    printInstructionNameAndOperand(name, constant);
+    putchar('\'');
     printValue(chunk->constants.values[constant]);
-    printf("'\n");
+    puts("'");
     return offset + 2;
 }
 
@@ -148,8 +185,9 @@ static int constantLongInstruction(char const *name, Chunk const *chunk,
     constantIndex = constantIndex << 8;
     constantIndex += chunk->code[offset + 3];
     Value constantValue = chunk->constants.values[constantIndex];
-    printf("%-16s %4d '", name, constantIndex);
+    printInstructionNameAndOperand(name, constantIndex);
+    putchar('\'');
     printValue(constantValue);
-    printf("'\n");
+    puts("'");
     return offset + 4;
 }

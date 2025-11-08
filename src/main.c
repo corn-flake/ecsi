@@ -21,7 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-// DO NOT SORT THEM!!
+// These depend on stdio.h and must come after it.
+// This comment prevents the auto-formatter from moving them.
 #include <readline/history.h>
 #include <readline/readline.h>
 
@@ -30,13 +31,26 @@
 #include "debug.h"
 #include "vm.h"
 
-static void repl();
+// Run interactively
+static void repl(void);
+
+// Open path as a file and run the code in it.
 static void runFile(char const *path);
+
+/*
+  Opens path as a file, reads the text into a
+  heap-allocated buffer, closes the file and returns the buffer.
+*/
 static char *readFile(char const *path);
 
-static void showStartupCopyingNotice();
-static void showW();
-static void showC();
+// Print a copying notice when the program starts in interactive mode.
+static void showStartupCopyingNotice(void);
+
+// Show warranty information.
+static void showWarranty(void);
+
+// Show copying information.
+static void showCopying(void);
 
 int main(int argc, char const *argv[]) {
     showStartupCopyingNotice();
@@ -47,7 +61,7 @@ int main(int argc, char const *argv[]) {
     } else if (2 == argc) {
         runFile(argv[1]);
     } else {
-        fprintf(stderr, "Usage: clox [path]\n");
+        fprintf(stderr, "%s\n", "Usage: ecsi [path]");
         exit(64);
     }
 
@@ -55,7 +69,7 @@ int main(int argc, char const *argv[]) {
     return 0;
 }
 
-static void repl() {
+static void repl(void) {
     char *line = readline("> ");
     while (line != NULL) {
         // Only add non-empty lines to the history
@@ -64,9 +78,9 @@ static void repl() {
         }
 
         if (!strcmp(line, "show c")) {
-            showC();
+            showCopying();
         } else if (!strcmp(line, "show w")) {
-            showW();
+            showWarranty();
         } else {
             interpret(line);
         }
@@ -112,7 +126,7 @@ static char *readFile(char const *path) {
     return buffer;
 }
 
-static void showStartupCopyingNotice() {
+static void showStartupCopyingNotice(void) {
     puts(
         "Ecsi Copyright (C) 2025 Evan Cooney\n"
         "This program comes with ABSOLUTELY NO WARRANTY; for details type "
@@ -121,7 +135,7 @@ static void showStartupCopyingNotice() {
         "under certain conditions; type 'show c' for details.");
 }
 
-static void showW() {
+static void showWarranty(void) {
     // This message was copied from the output of the ,show w
     // command on GNU Guile 3.0, but the word 'Guile' was replaced with 'Ecsi'.
     puts(
@@ -174,7 +188,7 @@ static void showW() {
         "See <http://www.gnu.org/licenses/lgpl.html>, for more details.\n");
 }
 
-static void showC() {
+static void showCopying(void) {
     // This was copied from the output of the ,show c command from GNU
     // Guile 3.0, but the word 'Guile' was replaced with the word 'Ecsi'.
     puts(

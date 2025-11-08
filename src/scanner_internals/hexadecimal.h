@@ -18,5 +18,8 @@
 
 #pragma once
 
-void inlineHexEscape();
-void hexScalarValue();
+// Scan an inline hex escape.
+void inlineHexEscape(void);
+
+// Scan a hex scalar value.
+void hexScalarValue(void);

@@ -22,15 +22,44 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Commented to make interactive debugging easiser
+/*
+  If defined, the Value data type will not be a tagged union.
+  Instead, it will store non-number values by manipulating the
+  unused bits in a NaN double.
+ */
 // #define NAN_BOXING
 
 #define DEBUG_PRINT_CODE
 #define DEBUG_TRACE_EXECUTION
+
+// If defined, every allocation will trigger garbage collection.
 #define DEBUG_STRESS_GC
+
+/*
+  If defined, prints log information about what the
+  garbage collector is doing.
+*/
 // #define DEBUG_LOG_GC
+
+// If defined, the VM will print the stack whenever the stack is changed.
 #define DEBUG_STACK
 
 #define UINT8_COUNT (UINT8_MAX + 1)
-#define ALLOW_UPPERCASE_HEX
+
+#define ERROR(...)                                                     \
+    do {                                                               \
+        fprintf(stderr, "(%s:%d) %s: ", __FILE__, __LINE__, __func__); \
+        fprintf(stderr, __VA_ARGS__);                                  \
+        putc('\n', stderr);                                            \
+    } while (false)
+
+#define DIE(...)            \
+    do {                    \
+        ERROR(__VA_ARGS__); \
+        exit(EXIT_FAILURE); \
+    } while (false)
+
+#define UNREACHABLE() DIE("%s", "Reached unreachable code path.")

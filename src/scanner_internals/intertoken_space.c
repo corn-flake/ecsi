@@ -1,4 +1,3 @@
-
 /*
   Copyright 2025 Evan Cooney
 
@@ -25,26 +24,63 @@
 #include "character_type_tests.h"
 #include "scanner_operations.h"
 
-static bool skipLineEndings() {
-    bool skippedAnything = false;
-    while (peek() == '\n' || peek() == '\r') {
-        scanner.line++;
-        advance();
-        if (!skippedAnything) skippedAnything = true;
-    }
-    return skippedAnything;
+// Try to skip as many "line ending"s as possible and return true if anything
+// was skipped.
+static bool skipLineEndings(void);
+
+/*
+  Try to skip as much "intraline whitespace" as possible and return true if
+  anything was skipped.
+*/
+static bool skipIntralineWhitespace(void);
+
+/*
+  Try to skip as much whitespace as possible and return true if anything was
+  skipped
+*/
+static bool skipWhitespace(void);
+
+// Return true if the scanner is at the start of a nested comment.
+static bool atStartOfNestedComment(void);
+
+// Return true if the scanner is at the end of a nested comment.
+static bool atEndOfNestedComment(void);
+
+// Try to skip the text of a nested comment.
+static void skipNestedCommentText(void);
+
+// Try to skip as many nested comment continuations as possible.
+static void skipNestedCommentConts(void);
+
+// Try to skip a nested comment, and return true if anything was skipped.
+static bool skipNestedComment(void);
+
+/*
+  Try to skip a single line comment, and return true if anything was
+  skipped.
+ */
+static bool skipLineComment(void);
+
+// Try to skip a comment, and return true if anything was skipped.
+static bool skipComment(void);
+
+/*
+ Try to skip as many atmosphere as possible, and return true if anything was
+ skipped.
+*/
+static bool skipAtmosphere(void);
+
+void skipIntertokenSpace(void) { while (skipAtmosphere()); }
+
+static bool skipAtmosphere(void) {
+    if (skipWhitespace()) return true;
+
+    if (skipComment()) return true;
+
+    return false;
 }
 
-static bool skipIntralineWhitespace() {
-    bool skippedAnything = false;
-    while (isIntralineWhitespace(peek())) {
-        advance();
-        if (!skippedAnything) skippedAnything = true;
-    }
-    return skippedAnything;
-}
-
-static bool skipWhitespace() {
+static bool skipWhitespace(void) {
     bool skippedAnything = false;
     bool skipped;
 
@@ -63,51 +99,34 @@ static bool skipWhitespace() {
     return skippedAnything;
 }
 
-static bool at_start_of_nested_comment() {
-    return peek() == '#' && peekNext() == '|';
-}
-
-static bool at_end_of_nested_comment() {
-    return peek() == '|' && peekNext() == '#';
-}
-
-static void skipNestedComment_text() {
-    while (!at_end_of_nested_comment() && !at_start_of_nested_comment())
+static bool skipIntralineWhitespace(void) {
+    bool skippedAnything = false;
+    while (isIntralineWhitespace(peek())) {
         advance();
-}
-
-/*
-  We forward declare the function because it's mutally recursive with
-  skipNestedComment.
-*/
-static void skipNestedComment_conts();
-
-static bool skipNestedComment() {
-    if (at_start_of_nested_comment()) {
-        // Skip the start of the comment.
-        advance();
-        advance();
-
-        // Skip the middle of the comment.
-        skipNestedComment_text();
-        skipNestedComment_conts();
-
-        // Skip the end of the comment.
-        advance();
-        advance();
-
-        return true;
+        if (!skippedAnything) skippedAnything = true;
     }
+    return skippedAnything;
+}
+
+static bool skipLineEndings(void) {
+    bool skippedAnything = false;
+    while (peek() == '\n' || peek() == '\r') {
+        scanner.line++;
+        advance();
+        if (!skippedAnything) skippedAnything = true;
+    }
+    return skippedAnything;
+}
+
+static bool skipComment(void) {
+    if (skipLineComment()) return true;
+
+    if (skipNestedComment()) return true;
 
     return false;
 }
 
-static void skipNestedComment_conts() {
-    skipNestedComment();
-    skipNestedComment_text();
-}
-
-static bool skipLineComment() {
+static bool skipLineComment(void) {
     if (peek() == ';') {
         while (peek() != '\n' && peek() != '\r') advance();
 
@@ -124,69 +143,39 @@ static bool skipLineComment() {
     return false;
 }
 
-/*
-  We forward declare this here because it's mutually recursive
-  with skip_datum_comment.
+static bool skipNestedComment(void) {
+    if (atStartOfNestedComment()) {
+        // Skip the start of the comment.
+        advance();
+        advance();
 
-  static void skipIntertokenSpace ();
-*/
+        // Skip the middle of the comment.
+        skipNestedCommentText();
+        skipNestedCommentConts();
 
-/*
-static bool
-skip_datum_comment ()
-{
-  if (peek () == '#' && peekNext () == ';')
-    {
-      skipIntertokenSpace ();
-      // skip the datum.
-      // TODO: Implement a datum scanner so that we can skip them.
-      error_token ("Datum comments are currently not supported.");
-      return true;
+        // Skip the end of the comment.
+        advance();
+        advance();
+
+        return true;
     }
-
-  return false;
-}
-*/
-
-static bool skipComment() {
-    if (skipLineComment()) return true;
-
-    if (skipNestedComment()) return true;
-
-    /*
-    if (skip_datum_comment ())
-      return true;
-    */
 
     return false;
 }
 
-/*
-static bool
-directive ()
-{
-  if (peek () == '#' && peek () == '!')
-    {
-      // TODO: Implement directives.
-      error_token ("Directives are currently not supported.");
-      return true;
-    }
-
-  return false;
-}
-*/
-
-static bool skipAtmosphere() {
-    if (skipWhitespace()) return true;
-
-    if (skipComment()) return true;
-
-    /*
-    if (directive ())
-      return true;
-    */
-
-    return false;
+static void skipNestedCommentConts(void) {
+    skipNestedComment();
+    skipNestedCommentText();
 }
 
-void skipIntertokenSpace() { while (skipAtmosphere()); }
+static void skipNestedCommentText(void) {
+    while (!atEndOfNestedComment() && !atStartOfNestedComment()) advance();
+}
+
+static bool atStartOfNestedComment(void) {
+    return peek() == '#' && peekNext() == '|';
+}
+
+static bool atEndOfNestedComment(void) {
+    return peek() == '|' && peekNext() == '#';
+}

@@ -20,12 +20,25 @@
 
 #include "../scanner.h"
 
+/*
+  Different possible types of identifiers to specify which type to try
+  to scan.
+*/
 typedef enum {
+    // A peculiar identifier that starts with a dot.
     IDENTIFIER_PECULIAR_STARTS_WITH_DOT,
+
     IDENTIFIER_PECULIAR_NO_DOT,
+
+    // An identifier that starts with a vertical line
     IDENTIFIER_STARTS_WITH_VERTICAL_LINE,
+
+    // An identifier that doesn't start with a vertical line.
     IDENTIFIER_NO_VERTICAL_LINE,
 } IdentifierVariant;
 
+// Scan and return an identifier token.
 Token identifier(IdentifierVariant variant);
+
+// Scan and return an identifier token which is a peculiar identifier.
 Token peculiarIdentifier(IdentifierVariant variant);

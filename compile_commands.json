@@ -1,0 +1,46 @@
+[
+  {
+    "arguments": [
+      "/usr/lib64/ccache/gcc",
+      "-c",
+      "-I.",
+      "-Iunity/src/",
+      "-Isrc/",
+      "-DTEST",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-fanalyzer",
+      "-g3",
+      "-fsanitize=address",
+      "-o",
+      "build/objs/chunk.o",
+      "src/chunk.c"
+    ],
+    "directory": "/home/evan/Projects/c/ecsi",
+    "file": "/home/evan/Projects/c/ecsi/src/chunk.c",
+    "output": "/home/evan/Projects/c/ecsi/build/objs/chunk.o"
+  },
+  {
+    "arguments": [
+      "/usr/lib64/ccache/gcc",
+      "-c",
+      "-I.",
+      "-Iunity/src/",
+      "-Isrc/",
+      "-DTEST",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-fanalyzer",
+      "-g3",
+      "-fsanitize=address",
+      "-o",
+      "build/objs/compiler.o",
+      "src/compiler.c"
+    ],
+    "directory": "/home/evan/Projects/c/ecsi",
+    "file": "/home/evan/Projects/c/ecsi/src/compiler.c",
+    "output": "/home/evan/Projects/c/ecsi/build/objs/compiler.o"
+  }
+]

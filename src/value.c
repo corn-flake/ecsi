@@ -27,12 +27,26 @@
 #include "memory.h"
 #include "object.h"
 
+// Return heap-allocated string representation of b.
 static char *booleanToString(bool b);
+
+// Return heap-allocated string representation of d.
 static char *doubleToString(double d);
+
+// Return heap-allocated string representation of l.
 static char *longToString(long l);
+
+// Calculate number of digits in l.
 static size_t numberOfDigitsInLong(long l);
+
+// Convert a fractional value into an integer value with the same digits.
 static long fractionToWholeNumber(double fraction);
-static bool doubleIsWholeNumber(double d);
+
+/*
+  Duplicate S as a heap-allocated string, and die with an appropriate message if
+  allocation fails.
+*/
+static char *checkedStrdup(char const *s);
 
 bool valuesEqual(Value a, Value b) {
 #ifdef NAN_BOXING
@@ -52,7 +66,7 @@ bool valuesEqual(Value a, Value b) {
         case VAL_OBJ:
             return AS_OBJ(a) == AS_OBJ(b);
         default:
-            return false;  // Unreachable
+            UNREACHABLE();
     }
 #endif
 }
@@ -94,10 +108,7 @@ char *valueToString(Value value) {
     if (IS_BOOL(value)) {
         return booleanToString(AS_BOOL(value));
     } else if (IS_NIL(value)) {
-        char *nilString = checkedMalloc(4);
-        memcpy(nilString, "nil", 3);
-        nilString[3] = '\0';
-        return nilString;
+        return checkedStrdup("nil");
     } else if (IS_NUMBER(value)) {
         return doubleToString(AS_NUMBER(value));
     } else if (IS_OBJ(value)) {
@@ -109,20 +120,12 @@ char *valueToString(Value value) {
     switch (value.type) {
         case VAL_BOOL:
             return booleanToString(AS_BOOL(value));
-            break;
-        case VAL_NIL: {
-            char *nilString = checkedMalloc(4);
-            memcpy(nilString, "nil", 3);
-            nilString[3] = '\0';
-            return nilString;
-            break;
-        }
+        case VAL_NIL:
+            return checkedStrdup("nil");
         case VAL_NUMBER:
             return doubleToString(AS_NUMBER(value));
-            break;
         case VAL_OBJ:
             return objectToString(value);
-            break;
         default:
             return "";
     }
@@ -130,55 +133,27 @@ char *valueToString(Value value) {
 }
 
 static char *doubleToString(double d) {
-    long integerPart = (long)d;
-    double fractionalPart = d - (double)(long)d;
-    long fractionalPartAsWhole = fractionToWholeNumber(fractionalPart);
-
-    size_t integerPartDigits = numberOfDigitsInLong(integerPart);
-    size_t fractionalPartDigits = numberOfDigitsInLong(fractionalPartAsWhole);
-
-    // Add 2 for the dot and the null terminator
-    char *string = checkedMalloc(integerPartDigits + fractionalPartDigits + 2);
-    char *integerPartString = longToString(integerPart);
-    char *fractionalPartString = longToString(fractionalPartAsWhole);
-    char *positionInString = string;
-
-    memcpy(positionInString, integerPartString, integerPartDigits);
-    positionInString += integerPartDigits;
-
-    *positionInString = '.';
-    positionInString++;
-
-    memcpy(positionInString, fractionalPartString, fractionalPartDigits);
-    positionInString += fractionalPartDigits;
-
-    *positionInString = '\0';
-
-    free(integerPartString);
-    free(fractionalPartString);
+    long integerPart = trunc(d);
+    long fractionalPart = fractionToWholeNumber(d - (double)integerPart);
+    size_t stringLength = numberOfDigitsInLong(integerPart) +
+                          numberOfDigitsInLong(fractionalPart);
+    // Add 2 for the null terminator and the dot.
+    char *string = checkedMalloc(stringLength + 2);
+    snprintf(string, stringLength, "%ld.%ld", integerPart, fractionalPart);
     return string;
 }
 
 static char *longToString(long l) {
-#define INTEGRAL_TO_CHAR(x) (char)(48 + x)
     size_t length = numberOfDigitsInLong(l);
     char *string = checkedMalloc(length + 1);
-
-    size_t i = length - 1;
-    do {
-        string[i] = INTEGRAL_TO_CHAR(l % 10L);
-        l /= 10L;
-    } while (i--);
-
-    string[length] = '\0';
+    snprintf(string, length, "%ld", l);
     return string;
-#undef INTEGRAL_TO_CHAR
 }
 
-static bool doubleIsWholeNumber(double d) { return d == (double)(long)d; }
+bool doubleIsInteger(double d) { return trunc(d) == d; }
 
 static long fractionToWholeNumber(double fraction) {
-    while (!doubleIsWholeNumber(fraction)) {
+    while (!doubleIsInteger(fraction)) {
         fraction *= 10;
     }
     return fraction;
@@ -187,15 +162,13 @@ static long fractionToWholeNumber(double fraction) {
 static size_t numberOfDigitsInLong(long l) { return (size_t)ceil(log10(l)); }
 
 static char *booleanToString(bool b) {
-    char *string = NULL;
-    if (b) {
-        string = ALLOCATE(char, 5);
-        memcpy(string, "true", 4);
-        string[4] = '\0';
-    } else {
-        string = ALLOCATE(char, 6);
-        memcpy(string, "false", 5);
-        string[5] = '\0';
+    return checkedStrdup(b ? "#true" : "#false");
+}
+
+static char *checkedStrdup(char const *s) {
+    char *string = strdup(s);
+    if (NULL == string) {
+        DIE("Failed to duplicate \"%s\"", s);
     }
     return string;
 }

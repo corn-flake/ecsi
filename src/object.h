@@ -26,6 +26,7 @@
 #include "table.h"
 #include "value.h"
 
+// Retrieve the object type value. Value must be an object.
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 
 #define IS_CLOSURE(value) isObjType(value, OBJ_CLOSURE)
@@ -47,6 +48,10 @@
 #define AS_UPVALUE(value) ((ObjUpvalue *)AS_OBJ(value))
 #define AS_VECTOR(value) ((ObjVector *)AS_OBJ(value))
 
+/*
+  Create a new pair with car as its car and cdr as its cdr, and
+  treat it as a value.
+*/
 #define CONS(car, cdr) OBJ_VAL(newPair(car, cdr))
 
 #define CAR(value) (AS_PAIR(value)->car)
@@ -83,6 +88,7 @@
 #define SET_CDDAR(value, new) (CDR(CDAR(value)) = new)
 #define SET_CDDDR(value, new) (CDR(CDDR(value)) = new)
 
+// The type of object something is.
 typedef enum {
     OBJ_CLOSURE,
     OBJ_FUNCTION,
@@ -94,22 +100,26 @@ typedef enum {
     OBJ_VECTOR,
 } ObjType;
 
+// Convert a ObjType to a string representation.
 char const *objTypeToString(ObjType type);
 
+// Scheme object metadata.
 struct Obj {
-    ObjType type;
-    bool isMarked;
-    struct Obj *next;
+    ObjType type;      // Type of object
+    bool isMarked;     // True if accessible by other objects.
+    struct Obj *next;  // Next object in VM's objects list.
 };
 
+// A Scheme string.
 struct ObjString {
-    Obj obj;
-    int length;
-    char *chars;
-    // We store the string's hash because strings in Lox are
+    Obj obj;      // Metadata
+    int length;   // Length of the string
+    char *chars;  // Null terminated string data
+
+    // We store the string's hash because strings in Ecsi are
     // immutable and it improves performance to not re-hash the string
     // every time we look for a key in the hash table
-    uint32_t hash;
+    uint32_t hash;  // The hash of the string, calculated with hashString.
 };
 
 typedef struct ObjUpvalue {
@@ -119,14 +129,16 @@ typedef struct ObjUpvalue {
     struct ObjUpvalue *next;
 } ObjUpvalue;
 
+// A Scheme function
 typedef struct {
-    Obj obj;
-    int arity;
+    Obj obj;    // Metadata
+    int arity;  // Number of arguments
     int upvalueCount;
-    Chunk chunk;
-    ObjString *name;
+    Chunk chunk;      // Function code
+    ObjString *name;  // Function name
 } ObjFunction;
 
+// A Scheme closure.
 typedef struct {
     Obj obj;
     ObjFunction *function;
@@ -134,13 +146,16 @@ typedef struct {
     int upvalueCount;
 } ObjClosure;
 
+// An alias for pointers to Scheme functions implemented in C.
 typedef Value (*NativeFn)(int argCount, Value *args);
 
+// A Scheme function which is implemented in C.
 typedef struct {
     Obj obj;
     NativeFn function;
 } ObjNative;
 
+// A Scheme pair.
 typedef struct {
     Obj obj;
     Value car;
@@ -159,6 +174,8 @@ typedef struct {
 } ObjSymbol;
 
 /*
+  Determine whether value is an object of type type.
+
   We define this as an inline function instead of a macro because
   its body uses 'value' twice. Because this is a function, that
   means value only gets evaluated once. If it was a macro, then the
@@ -169,24 +186,44 @@ static inline bool isObjType(Value value, ObjType type) {
     return IS_OBJ(value) && AS_OBJ(value)->type == type;
 }
 
+// Return a heap-allocated string representation of value.
 char *objectToString(Value value);
 
+// Create a new closure whose underlying function is function.
 ObjClosure *newClosure(ObjFunction *function);
-ObjFunction *newFunction();
+
+// Create a new Scheme function.
+ObjFunction *newFunction(void);
+
+/*
+  Create a new pair whose car is car and whose cdr is cdr. Return the
+  result as an ObjPair.
+ */
 ObjPair *newPair(Value car, Value cdr);
+
+// Create a new native function object from the function pointer function.
 ObjNative *newNative(NativeFn function);
+
 ObjString *takeString(char *chars, int length);
+
+// Copy length chars into a newly allocated Scheme string.
 ObjString *copyString(char const *chars, int length);
-ObjVector *newVector();
+
+// Create a new vector.
+ObjVector *newVector(void);
+
+// Append value to vector.
 void vectorAppend(ObjVector *vector, Value value);
+
 ObjUpvalue *newUpvalue(Value *slot);
+
+// Create a new symbol, length long, with chars as its text.
 ObjSymbol *newSymbol(char const *chars, int length);
 
+// Print the text representation of value, interpreted as an object.
 void printObject(Value value);
 
-// Utility functions
-
-void append(ObjPair *pair, Value value);
+void appendElement(ObjPair *pair, Value value);
 
 // Appends elem to list, but pushes elem onto the stack first.
 // It pops elem when done.

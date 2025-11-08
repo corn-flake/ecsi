@@ -24,6 +24,7 @@
 
 #include "object.h"
 
+// The type of a token.
 typedef enum {
     // Keywords
     TOKEN_AND,
@@ -74,37 +75,63 @@ typedef enum {
     TOKEN_EOF
 } TokenType;
 
+// Return a string literal representation of type.
 char const *tokenTypeToString(TokenType type);
 
+// A token of code.
 typedef struct {
-    TokenType type;
-    char const *start;
-    size_t length;
-    size_t line;
+    TokenType type;     // Token type
+    char const *start;  // Pointer to first character in source code array.
+    size_t length;      // How long the token's text is.
+    size_t line;        // The line the token was found on.
 } Token;
 
-void printToken(Token *token);
-ObjString *tokenToObjString(Token *token);
-ObjSymbol *tokenToObjSymbol(Token *token);
+// Print a token
+void printToken(Token const *token);
 
+// Return a ObjString representation of token's text.
+ObjString *tokenToObjString(Token const *token);
+
+// Return an ObjSymbol representation of token's text.
+ObjSymbol *tokenToObjSymbol(Token const *token);
+
+// An array of tokens.
 typedef struct {
-    size_t count;
-    size_t capacity;
-    Token *array;
+    size_t count;     // Number of used elements
+    size_t capacity;  // Number of available elements
+    Token *array;     // Array of tokens
 } TokenArray;
 
+// Initialize the TokenArray at tokenArray.
 void initTokenArray(TokenArray *tokenArray);
+
+// Append token to tokenArray.
 void addToken(TokenArray *tokenArray, Token token);
+
+/*
+  Free memory associated with tokenArray. Does not
+  free the memory at tokenArray, so it's safe to use on
+  stack-allocated memory.
+*/
 void freeTokenArray(TokenArray *tokenArray);
 
+// The state of the scanner
 typedef struct {
-    char const *start;
-    char const *current;
-    size_t line;
+    char const *start;    // Pointer into the source code to the start of the
+                          // current token
+    char const *current;  // Pointer into the source code to the current
+                          // character being considered
+    size_t line;          // The current line
 } Scanner;
 
+// Global scanner variable, declared in scanner.c
 extern Scanner scanner;
 
+// Initialize the scanner with a source code string.
 void initScanner(char const *source);
-Token scanToken();
+
+// Scan and return one token.
+Token scanToken(void);
+
+// Scan as many tokens as possible and append them to tokenArray.
 void scanAllTokensInto(TokenArray *tokenArray);

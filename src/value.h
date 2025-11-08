@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <math.h>
 #include <string.h>
 
 #include "common.h"
@@ -31,6 +32,7 @@ typedef struct ObjString ObjString;
 #include <limits.h>
 
 #define SIGN_BIT ((uint64_t)0x8000000000000000)
+
 #define QNAN ((uint64_t)0x7ffc000000000000)
 
 #define TAG_NIL 1    // 01.
@@ -64,7 +66,7 @@ static inline double valueToNum(Value value) {
 #define IS_NUMBER(value) (((value) & QNAN) != QNAN)
 #define IS_OBJ(value) (((value) & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT))
 
-#define AS_BOOL(value) (value == TRUE_VAL)
+#define AS_BOOL(value) ((value) == TRUE_VAL)
 #define AS_NUMBER(value) valueToNum(value)
 #define AS_OBJ(value) ((Obj *)(uintptr_t)((value) & ~(SIGN_BIT | QNAN)))
 #define AS_CHARACTER(value) ((char)AS_NUMBER(value))
@@ -107,18 +109,18 @@ typedef struct {
 #define AS_NUMBER(value) ((value).as.number)
 #define AS_CHARACTER(value) ((value).as.character)
 
-#define BOOL_VAL(value) ((Value){VAL_BOOL, {.boolean = value}})
+#define BOOL_VAL(value) ((Value){VAL_BOOL, {.boolean = (value)}})
 #define NIL_VAL ((Value){VAL_NIL, {.number = 0}})
-#define NUMBER_VAL(value) ((Value){VAL_NUMBER, {.number = value}})
-#define CHARACTER_VAL(value) ((Value){VAL_CHARACTER, {.character = value}})
-#define OBJ_VAL(object) ((Value){VAL_OBJ, {.obj = (Obj *)object}})
+#define NUMBER_VAL(value) ((Value){VAL_NUMBER, {.number = (value)}})
+#define CHARACTER_VAL(value) ((Value){VAL_CHARACTER, {.character = (value)}})
+#define OBJ_VAL(object) ((Value){VAL_OBJ, {.obj = (Obj *)(object)}})
 
 #endif
 
-static inline bool doubleIsExact(double d) { return (double)(long)d == d; }
+bool doubleIsInteger(double d);
 
 static inline bool isExactInteger(Value value) {
-    return IS_NUMBER(value) && doubleIsExact(AS_NUMBER(value));
+    return IS_NUMBER(value) && doubleIsInteger(AS_NUMBER(value));
 }
 
 #define IS_EXACT_INTEGER(value) isExactInteger(value)
@@ -130,19 +132,25 @@ typedef struct {
 } ValueArray;
 
 // Test if two values are equal.
-// Does not trigger the GC.
 bool valuesEqual(Value a, Value b);
 
-// Returns a heap-allocated string that represents how that value would be
-// printed.
-// It is mainly for debugging.
+/*
+  Returns a heap-allocated string of the string representation
+  of value.
+ */
 char *valueToString(Value value);
 
 // Print a value.
-// Does not trigger the GC.
 void printValue(Value value);
 
+// Initialize the ValueArray at array.
 void initValueArray(ValueArray *array);
+
+// Append value to the ValueArray at array.
 void writeValueArray(ValueArray *array, Value value);
+
+// Free memory associated with the ValueArray at array.
 void freeValueArray(ValueArray *array);
+
+// Print the ValueArray at array.
 void printValueArray(ValueArray *array);

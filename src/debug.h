@@ -20,5 +20,13 @@
 #pragma once
 #include "chunk.h"
 
+/*
+  Prints the disassembly of chunk, titled as name.
+ */
 void disassembleChunk(Chunk *const chunk, char const *name);
+
+/*
+  Prints the disassembly of the instruction at offset in chunk,
+  and returns the index of the next instruction.
+ */
 int disassembleInstruction(Chunk *const chunk, int offset);

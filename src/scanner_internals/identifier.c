@@ -28,19 +28,18 @@
 #include "hexadecimal.h"
 #include "scanner_operations.h"
 
-static void subsequents();
-static void symbolElement();
-static bool atInlineHexEscape();
-static bool atMnemonicEscape();
-static void mnemonicEscape();
-static void dotSubsequent();
-static void signSubsequent();
+// Parse zero or more subsequents
+static void subsequents(void);
+static void symbolElement(void);
+static bool atInlineHexEscape(void);
+static bool atMnemonicEscape(void);
+static void mnemonicEscape(void);
+static void dotSubsequent(void);
+static void signSubsequent(void);
 static Token genericIdentifier(IdentifierVariant variant);
 static TokenType keywordType(Token const *token);
 static TokenType checkKeyword(int start, int length, char const *rest,
                               TokenType type);
-
-static inline size_t min(size_t x, size_t y) { return x > y ? x : y; }
 
 Token identifier(IdentifierVariant variant) {
     Token identifierToken = genericIdentifier(variant);
@@ -145,7 +144,7 @@ static Token genericIdentifier(IdentifierVariant variant) {
     return makeToken(TOKEN_IDENTIFIER);
 }
 
-static void symbolElement() {
+static void symbolElement(void) {
     if ('|' != peek() && '\\' != peek()) {
         advance();
         return;
@@ -162,11 +161,11 @@ static void symbolElement() {
     }
 }
 
-static bool atInlineHexEscape() {
+static bool atInlineHexEscape(void) {
     return !('\\' == peek() && 'x' == peekNext());
 }
 
-static bool atMnemonicEscape() {
+static bool atMnemonicEscape(void) {
     if ('\\' != peek()) return false;
 
     switch (peekNext()) {
@@ -181,12 +180,13 @@ static bool atMnemonicEscape() {
     }
 }
 
-static void mnemonicEscape() {
+static void mnemonicEscape(void) {
     advance();
     advance();
 }
 
 Token peculiarIdentifier(IdentifierVariant variant) {
+    // TODO: Verify that this function works.
     if (IDENTIFIER_PECULIAR_STARTS_WITH_DOT == variant) dotSubsequent();
 
     // The identifier is only one explicit sign, like '+'.
@@ -207,24 +207,22 @@ Token peculiarIdentifier(IdentifierVariant variant) {
         return makeToken(TOKEN_IDENTIFIER);
     }
 
-    // Unreached.
-    fprintf(stderr, "Should not reach here in peculiarIdentifier.\n");
-    assert(false);
+    UNREACHABLE();
 }
 
-static void signSubsequent() {
+static void signSubsequent(void) {
     if (!isSignSubsequent(peek())) errorToken("Expected a sign subsequent.");
     advance();
 }
 
-static void dotSubsequent() {
+static void dotSubsequent(void) {
     if (!isDotSubsequent(peek())) {
         errorToken("Expected a dot subsequent.");
     }
     advance();
 }
 
-static void subsequents() {
+static void subsequents(void) {
     while (isSubsequent(peek())) {
         advance();
     }

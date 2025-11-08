@@ -56,20 +56,6 @@ typedef enum {
     TYPE_SCRIPT,
 } FunctionType;
 
-typedef enum {
-    EXPR_IF,
-    EXPR_AND,
-    EXPR_OR,
-    EXPR_LET,
-    EXPR_COND,
-    EXPR_DEFINE,
-    EXPR_WHEN,
-    EXPR_UNLESS,
-    EXPR_LAMBDA,
-    EXPR_BEGIN,
-    EXPR_CALL,
-} ExpressionType;
-
 typedef struct Compiler {
     struct Compiler *enclosing;
     ObjFunction *function;

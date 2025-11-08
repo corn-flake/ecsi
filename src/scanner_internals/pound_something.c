@@ -88,7 +88,7 @@ static char getCharacterNameStartLetter() {
 }
 
 static Token character() {
-    if (peek() == 'x' && isHexDigit(peekNext())) {
+    if (peek() == 'x' && isxdigit(peekNext())) {
         // We advance to read the 'x'.
         advance();
         hexScalarValue();

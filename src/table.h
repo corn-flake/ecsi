@@ -24,11 +24,13 @@
 
 #define TABLE_MAX_LOAD 0.75
 
+// An entry in a hash table.
 typedef struct {
-    ObjString *key;
-    Value value;
+    ObjString *key;  // Key
+    Value value;     // Value
 } Entry;
 
+// A hash table mapping ObjStrings to Values.
 typedef struct {
     int count;
     int capacity;

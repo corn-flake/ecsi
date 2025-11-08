@@ -57,11 +57,7 @@ int *decompressLineNumberArray(LineNumberArray *array) {
     int entriesCount = numberOfEntries(array);
     size_t size = sizeof(int) * entriesCount;
 
-    int *decompressed = malloc(size);
-    if (NULL == decompressed) {
-        fprintf(stderr, "decompressLineNumberArray: couldn't allocate memory.");
-        exit(1);
-    }
+    int *decompressed = checkedMalloc(size);
 
     int entryIndex = 0;
     int decompressedIndex = 0;

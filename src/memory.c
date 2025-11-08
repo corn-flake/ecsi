@@ -34,19 +34,28 @@
 #include "debug.h"
 #endif
 
-#define MEMORY_ALLOC_FAIL() exit(1)
-
+// Mark all values in array.
 static void markArray(ValueArray *array);
+
+// Free the object at object.
 static void freeObject(Obj *object);
-static void markRoots();
+
+// Mark the garbage collector roots.
+static void markRoots(void);
+
+// Mark object and everything it references, one layer deep.
 static void blackenObject(Obj *object);
-static void traceReferences();
-static void sweep();
+
+// Mark all accessible objects.
+static void traceReferences(void);
+
+// Free any inaccessible objects.
+static void sweep(void);
 
 void *checkedMalloc(size_t size) {
     void *memory = malloc(size);
     if (NULL == memory) {
-        MEMORY_ALLOC_FAIL();
+        DIE("Failed to allocate %zu bytes of memory.", size);
     }
     return memory;
 }
@@ -54,7 +63,7 @@ void *checkedMalloc(size_t size) {
 void *checkedRealloc(void *ptr, size_t newSize) {
     void *result = realloc(ptr, newSize);
     if (NULL == result) {
-        MEMORY_ALLOC_FAIL();
+        DIE("Failed to grow memory at %p to %zu bytes.", ptr, newSize);
     }
     return result;
 }
@@ -104,7 +113,7 @@ void markValue(Value value) {
     if (IS_OBJ(value)) markObject(AS_OBJ(value));
 }
 
-void freeObjects() {
+void freeObjects(void) {
     Obj *object = vm.objects;
     while (object != NULL) {
         Obj *next = object->next;
@@ -169,7 +178,7 @@ static void freeObject(Obj *object) {
     }
 }
 
-static void markRoots() {
+static void markRoots(void) {
     for (Value *slot = vm.stack; slot < vm.stackTop; slot++) {
         markValue(*slot);
     }
@@ -237,14 +246,14 @@ static void blackenObject(Obj *object) {
     }
 }
 
-static void traceReferences() {
+static void traceReferences(void) {
     while (vm.grayCount > 0) {
         Obj *object = vm.grayStack[--vm.grayCount];
         blackenObject(object);
     }
 }
 
-static void sweep() {
+static void sweep(void) {
     Obj *previous = NULL;
     Obj *object = vm.objects;
     while (object != NULL) {
@@ -266,7 +275,7 @@ static void sweep() {
     }
 }
 
-void collectGarbage() {
+void collectGarbage(void) {
 #ifdef DEBUG_LOG_GC
     printStack();
     printf("\n");

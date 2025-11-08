@@ -320,7 +320,7 @@ ObjClosure *newClosure(ObjFunction *function) {
     return closure;
 }
 
-ObjFunction *newFunction() {
+ObjFunction *newFunction(void) {
     ObjFunction *function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
     function->arity = 0;
     function->upvalueCount = 0;
@@ -387,7 +387,7 @@ ObjString *copyString(char const *chars, int length) {
     return allocateString(heapChars, length, hash);
 }
 
-ObjVector *newVector() {
+ObjVector *newVector(void) {
     ObjVector *vector = ALLOCATE_OBJ(ObjVector, OBJ_VECTOR);
     initValueArray(&vector->array);
     return vector;
@@ -505,19 +505,16 @@ static void printList(ObjPair const *list) {
     putchar(')');
 }
 
-void append(ObjPair *pair, Value value) {
+void appendElement(ObjPair *pair, Value value) {
     ObjPair *originalPair = pair;
     // Nothing to do
     if (IS_NIL(value)) return;
 
     while (!IS_NIL(pair->cdr)) {
         if (!IS_PAIR(pair->cdr)) {
-            fprintf(stderr,
-                    "append - pair given was not a list (not a "
-                    "sequence of pairs whose final pair's cdr is nil)\n");
             // We crash here because this function is only called by the parser
             // and should only be called on valid lists.
-            assert(false);
+            DIE("%s", "pair given was not a list.");
         }
         pair = AS_PAIR(pair->cdr);
     }
@@ -534,7 +531,7 @@ void append(ObjPair *pair, Value value) {
 
 void guardedAppend(Value list, Value elem) {
     if (IS_OBJ(elem)) push(elem);
-    append(AS_PAIR(list), elem);
+    appendElement(AS_PAIR(list), elem);
     if (IS_OBJ(elem)) pop();  // elem
 }
 

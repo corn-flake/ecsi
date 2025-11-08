@@ -18,4 +18,5 @@
 
 #pragma once
 
-void skipIntertokenSpace();
+// Skip space between tokens.
+void skipIntertokenSpace(void);

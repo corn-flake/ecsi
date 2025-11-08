@@ -24,13 +24,13 @@
 #include "character_type_tests.h"
 #include "scanner_operations.h"
 
-void hexScalarValue() {
-    while (isHexDigit(peek())) {
+void hexScalarValue(void) {
+    while (isxdigit(peek())) {
         advance();
     }
 }
 
-void inlineHexEscape() {
+void inlineHexEscape(void) {
     advance();
     advance();
 

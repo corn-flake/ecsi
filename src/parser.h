@@ -25,13 +25,51 @@
 #include "scanner.h"
 #include "value.h"
 
+typedef enum {
+    EXPR_IDENTIFIER,
+    EXPR_LITERAL,
+    EXPR_CALL,
+    EXPR_LAMBDA,
+    EXPR_IF,
+    EXPR_SET,
+    EXPR_COND,
+    EXPR_AND,
+    EXPR_OR,
+    EXPR_WHEN,
+    EXPR_UNLESS,
+    EXPR_LET,
+
+    // Unimplemented
+    EXPR_LET_STAR,
+    EXPR_CASE,
+    EXPR_LETREC,
+    EXPR_LETREC_STAR,
+    EXPR_LET_VALUES,
+    EXPR_LET_STAR_VALUES,
+    EXPR_BEGIN,
+    EXPR_DO,
+    EXPR_DELAY,
+    EXPR_DELAY_FORCE,
+    EXPR_PARAMETERIZE,
+    EXPR_GUARD,
+    EXPR_QUASIQUOTATION,
+    EXPR_CASE_LAMBDA,
+} ASTNodeType;
+
+typedef struct ASTNode {
+    size_t line;
+    size_t length;
+    char const *start;
+    ASTNodeType type;
+} ASTNode;
+
 typedef struct {
     TokenArray tokens;
     Token *previous;
     Token *current;
     bool hadError;
     bool panicMode;
-    Value ast;
+    ASTNode ast;
 } Parser;
 
 extern Parser parser;
