@@ -209,7 +209,7 @@ Value parseAtLeastNExprsUsing(ParseFn parse, size_t n) {
     push(list);
     for (; exprsParsed < n && canContinueList(); exprsParsed++) {
         expr = parse();
-        append(AS_PAIR(list), expr);
+        appendElement(AS_PAIR(list), expr);
     }
     pop();  // list
 
@@ -224,7 +224,7 @@ Value parseAtLeastNExprsUsing(ParseFn parse, size_t n) {
     push(list);
     while (canContinueList()) {
         expr = parse();
-        append(AS_PAIR(list), expr);
+        appendElement(AS_PAIR(list), expr);
     }
     pop();  // list
 

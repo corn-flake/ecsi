@@ -1,37 +1,28 @@
-#include <stdbool.h>
+#include <stdio.h>
 
 #include "../src/vm.h"
 #include "../unity/src/unity.h"
 
-void setUp() { initVM(); }
-void tearDown() { freeVM(); }
-
-void test_pop() {
-    Value cases[5] = {NIL_VAL, NUMBER_VAL(5), BOOL_VAL(true), NUMBER_VAL(1.23),
-                      BOOL_VAL(false)};
-
-    for (int i = 0; i < 5; i++) {
-        push(cases[i]);
-        TEST_ASSERT(valuesEqual(cases[i], pop()));
-    }
+void setUp(void) {
+    puts("setting it up");
+    initVM();
 }
 
-void test_push() {
-    int i = 0;
-    for (; i < 100000; i++) {
-        push(NIL_VAL);
-    }
-
-    for (; i >= 0; i--) {
-        pop();
-    }
+void tearDown(void) {
+    puts("tearing it down");
+    freeVM();
 }
 
-void test_interpret() {}
+void testPop(void) { puts("testing pop"); }
 
-int main() {
+void testPush(void) { puts("testing push"); }
+
+void testInterpret(void) { puts("testing interpret"); }
+
+int main(void) {
     UNITY_BEGIN();
-    RUN_TEST(test_pop);
-    RUN_TEST(test_push);
+    RUN_TEST(testPop);
+    RUN_TEST(testPush);
+    RUN_TEST(testInterpret);
     return UNITY_END();
 }

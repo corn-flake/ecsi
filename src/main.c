@@ -53,19 +53,26 @@ static void showWarranty(void);
 static void showCopying(void);
 
 int main(int argc, char const *argv[]) {
-    showStartupCopyingNotice();
-    initVM();
+    //    showStartupCopyingNotice();
+    /* initVM(); */
 
-    if (1 == argc) {
-        repl();
-    } else if (2 == argc) {
-        runFile(argv[1]);
-    } else {
-        fprintf(stderr, "%s\n", "Usage: ecsi [path]");
-        exit(64);
+    /* if (1 == argc) { */
+    /*     repl(); */
+    /* } else if (2 == argc) { */
+    /*     runFile(argv[1]); */
+    /* } else { */
+    /*     fprintf(stderr, "%s\n", "Usage: ecsi [path]"); */
+    /*     exit(64); */
+    /* } */
+
+    /* freeVM(); */
+
+    for (int i = 0; i < 100; i++) {
+        printf("i = %d\n", i);
+        initVM();
+        freeVM();
     }
 
-    freeVM();
     return 0;
 }
 

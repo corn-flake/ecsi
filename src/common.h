@@ -32,11 +32,17 @@
  */
 // #define NAN_BOXING
 
-#define DEBUG_PRINT_CODE
-#define DEBUG_TRACE_EXECUTION
+// #define DEBUG_PRINT_CODE
+// #define DEBUG_TRACE_EXECUTION
 
 // If defined, every allocation will trigger garbage collection.
 #define DEBUG_STRESS_GC
+
+/*
+  If defined, every time the GC frees an object it will print it
+  and say that it's being freed.
+*/
+// #define DEBUG_FREE_OBJECTS
 
 /*
   If defined, prints log information about what the
@@ -45,7 +51,7 @@
 // #define DEBUG_LOG_GC
 
 // If defined, the VM will print the stack whenever the stack is changed.
-#define DEBUG_STACK
+// #define DEBUG_STACK
 
 #define UINT8_COUNT (UINT8_MAX + 1)
 

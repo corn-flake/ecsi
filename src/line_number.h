@@ -18,15 +18,17 @@
 
 #pragma once
 
+#include <stddef.h>
+
 // An run-length encoded line number.
 typedef struct {
-    int lineNumber;  // The line number
-    int repeats;     // The number of times the number repeats.
+    unsigned int lineNumber;  // The line number
+    unsigned int repeats;     // The number of times the number repeats.
 } LineNumber;
 
 typedef struct {
-    int count;     // The number of used elements in lineNumbers.
-    int capacity;  // The number of available elements in lineNumbers.
+    size_t count;     // The number of used elements in lineNumbers.
+    size_t capacity;  // The number of available elements in lineNumbers.
     LineNumber *lineNumbers;  // An array of lineNumbers.
 } LineNumberArray;
 
@@ -43,15 +45,9 @@ void freeLineNumberArray(LineNumberArray *array);
 /*
   Append lineNumber to array.
  */
-int writeNumber(LineNumberArray *array, int lineNumber);
-
-/*
-  Decompress array into a normal, heap-allocated array of integers,
-  and return a pointer to that array.
- */
-int *decompressLineNumberArray(LineNumberArray *array);
+unsigned int writeNumber(LineNumberArray *array, unsigned int lineNumber);
 
 /*
   Return the number of entries in array.
  */
-int numberOfEntries(LineNumberArray *array);
+size_t numberOfEntries(LineNumberArray *array);

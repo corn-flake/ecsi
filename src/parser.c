@@ -37,9 +37,9 @@
 Parser parser;
 
 static void appendToAst(Value value);
-static void synchronize();
-static Value parseListBasedExpression();
-static Value parseQuotation();
+static void synchronize(void);
+static Value parseListBasedExpression(void);
+static Value parseQuotation(void);
 
 void initParser(TokenArray tokens) {
     parser.tokens = tokens;
@@ -50,16 +50,16 @@ void initParser(TokenArray tokens) {
     parser.ast = NIL_VAL;
 }
 
-void markParserRoots() { markValue(parser.ast); }
+void markParserRoots(void) { markValue(parser.ast); }
 
-Value parseAllTokens() {
+Value parseAllTokens(void) {
     while (!check(TOKEN_EOF)) {
         appendToAst(parseExpression());
     }
     return parser.ast;
 }
 
-Value parseExpression() {
+Value parseExpression(void) {
     Value value = NIL_VAL;
 
     switch (parser.current->type) {

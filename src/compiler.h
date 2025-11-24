@@ -23,4 +23,4 @@
 #include "object.h"
 
 ObjFunction *compile(char const *source);
-void markCompilerRoots();
+void markCompilerRoots(void);

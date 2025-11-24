@@ -4,66 +4,77 @@
 #include "../src/value.h"
 #include "../src/vm.h"
 #include "../unity/src/unity.h"
+#include "debug.h"
 
-void setUp() { initVM(); }
+Chunk chunk;
 
-void tearDown() { freeVM(); }
+#define LINE 4
 
-void test_writeChunkGrow() {
-    Chunk chunk;
+void setUp(void) {
+    initVM();
     initChunk(&chunk);
-    writeChunk(&chunk, 0xff, 0);
+}
+
+void tearDown(void) {
+    freeChunk(&chunk);
+    freeVM();
+}
+
+void test_writeChunkGrow(void) {
+    writeChunk(&chunk, 0xff, LINE);
 
     TEST_ASSERT_EQUAL_INT(8, chunk.capacity);
     TEST_ASSERT_EQUAL_INT(1, chunk.count);
-    TEST_ASSERT_EQUAL_UINT8(0xff, chunk.code[0]);
+    TEST_ASSERT_EQUAL_UINT8(0xFF, chunk.code[0]);
 }
 
-void test_addConstant() {
-    Chunk chunk;
-    initChunk(&chunk);
-
+void test_addConstant(void) {
     addConstant(&chunk, NIL_VAL);
     TEST_ASSERT(IS_NIL(chunk.constants.values[0]));
 }
 
-void test_getLine() {
-    Chunk chunk;
-    initChunk(&chunk);
+void test_getLine(void) {
+    int const PRIMARY_LINE = LINE;
+    int const SECONDARY_LINE = 123;
 
-    writeChunk(&chunk, 0xFF, 123);
-    TEST_ASSERT_EQUAL_INT(123, chunk.lines.lineNumbers[0].lineNumber);
+    writeChunk(&chunk, 0xFF, SECONDARY_LINE);
+    TEST_ASSERT_EQUAL_INT(SECONDARY_LINE,
+                          chunk.lines.lineNumbers[0].lineNumber);
     TEST_ASSERT_EQUAL_INT(1, chunk.lines.lineNumbers[0].repeats);
 
-    writeChunk(&chunk, 0xFF, 123);
-    TEST_ASSERT_EQUAL_INT(123, chunk.lines.lineNumbers[0].lineNumber);
+    writeChunk(&chunk, 0xFF, SECONDARY_LINE);
+    TEST_ASSERT_EQUAL_INT(SECONDARY_LINE,
+                          chunk.lines.lineNumbers[0].lineNumber);
     TEST_ASSERT_EQUAL_INT(2, chunk.lines.lineNumbers[0].repeats);
 
-    writeChunk(&chunk, 0xFF, 4);
-    TEST_ASSERT_EQUAL_INT(4, chunk.lines.lineNumbers[1].lineNumber);
+    writeChunk(&chunk, 0xFF, PRIMARY_LINE);
+    TEST_ASSERT_EQUAL_INT(PRIMARY_LINE, chunk.lines.lineNumbers[1].lineNumber);
     TEST_ASSERT_EQUAL_INT(1, chunk.lines.lineNumbers[1].repeats);
 
-    writeChunk(&chunk, 0xFF, 4);
-    TEST_ASSERT_EQUAL_INT(4, chunk.lines.lineNumbers[1].lineNumber);
+    writeChunk(&chunk, 0xFF, PRIMARY_LINE);
+    TEST_ASSERT_EQUAL_INT(PRIMARY_LINE, chunk.lines.lineNumbers[1].lineNumber);
     TEST_ASSERT_EQUAL_INT(2, chunk.lines.lineNumbers[1].repeats);
 }
 
-void test_writeConstant() {
-    Chunk chunk;
-    initChunk(&chunk);
-
-    writeConstant(&chunk, NIL_VAL, 4);
-    TEST_ASSERT_EQUAL_INT(OP_CONSTANT, chunk.code[0]);
-    TEST_ASSERT(IS_NIL(chunk.constants.values[0]));
-
-    for (int written = 1; written <= 256; written++) {
-        writeConstant(&chunk, NIL_VAL, 4);
+void test_writeConstant(void) {
+    int i = 0;
+    for (; i < 256; i++) {
+        writeConstant(&chunk, NUMBER_VAL(1), LINE);
+        TEST_ASSERT_EQUAL_UINT8(OP_CONSTANT, chunk.code[2 * i]);
     }
 
-    TEST_ASSERT_EQUAL_INT(OP_CONSTANT_LONG, chunk.code[chunk.count - 1]);
+    int opConstantLongStart = 2 * i;
+    for (i = 0; i < 10; i++) {
+        writeConstant(&chunk, NUMBER_VAL(1), LINE);
+        TEST_ASSERT_EQUAL_UINT8(OP_CONSTANT_LONG,
+                                chunk.code[opConstantLongStart + 4 * i]);
+    }
+    disassembleChunk(&chunk, "test_WriteConstant chunk");
 }
 
-int main() {
+#undef LINE
+
+int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_writeChunkGrow);
     RUN_TEST(test_addConstant);

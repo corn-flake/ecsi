@@ -37,7 +37,7 @@ static int simpleInstruction(char const *name, int offset);
   Prints name left-aligned in a 16 character field, and operand right-aligned
   in a 4 character field, then a single space character.
  */
-static void printInstructionNameAndOperand(char const *name, uint8_t operand);
+static void printInstructionNameAndOperand(char const *name, uint32_t operand);
 
 /*
   Prints the 2-byte instruction at offset in chunk, labeling it as name, and
@@ -142,15 +142,6 @@ int disassembleInstruction(Chunk *const chunk, int offset) {
     }
 }
 
-static int simpleInstruction(const char *name, int offset) {
-    puts(name);
-    return offset + 1;
-}
-
-static void printInstructionNameAndOperand(char const *name, uint8_t operand) {
-    printf("%-16s %4d ", name, operand);
-}
-
 static int byteInstruction(const char *name, Chunk const *chunk, int offset) {
     uint8_t slot = chunk->code[offset + 1];
     printInstructionNameAndOperand(name, slot);
@@ -179,15 +170,37 @@ static int constantInstruction(const char *name, Chunk const *chunk,
 
 static int constantLongInstruction(char const *name, Chunk const *chunk,
                                    int offset) {
-    uint32_t constantIndex = (uint32_t)chunk->code[offset + 1];
-    constantIndex = constantIndex << 8;
-    constantIndex += chunk->code[offset + 2];
-    constantIndex = constantIndex << 8;
-    constantIndex += chunk->code[offset + 3];
+    /*
+      This shifting and or-ing code is necessary instead of something
+      like casting chunk->code to a uint32_t * and derefencing, then masking,
+      or using memcpy because I think my computer is flipping the bytes somehow.
+      When I used casting or memcpy, the bytes ended up in flipped order.
+    */
+
+    uint32_t constantIndex = (uint32_t)(chunk->code[offset + 1] << 8);
+    constantIndex |= chunk->code[offset + 2];
+    constantIndex <<= 8;
+    constantIndex |= chunk->code[offset + 3];
+
+    uint32_t constantIndexMemcpy = 0;
+    memcpy(&constantIndexMemcpy, chunk->code + offset + 1, 3);
+
+    printf("\nmemcpy: 0x%08X\nshifting: 0x%08X\n", constantIndexMemcpy,
+           constantIndex);
+
     Value constantValue = chunk->constants.values[constantIndex];
     printInstructionNameAndOperand(name, constantIndex);
     putchar('\'');
     printValue(constantValue);
     puts("'");
     return offset + 4;
+}
+
+static void printInstructionNameAndOperand(char const *name, uint32_t operand) {
+    printf("%-16s %4u ", name, operand);
+}
+
+static int simpleInstruction(const char *name, int offset) {
+    puts(name);
+    return offset + 1;
 }

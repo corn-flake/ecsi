@@ -34,8 +34,6 @@ static char *booleanToString(bool b);
 static char *doubleToString(double d);
 
 // Return heap-allocated string representation of l.
-static char *longToString(long l);
-
 // Calculate number of digits in l.
 static size_t numberOfDigitsInLong(long l);
 
@@ -140,13 +138,6 @@ static char *doubleToString(double d) {
     // Add 2 for the null terminator and the dot.
     char *string = checkedMalloc(stringLength + 2);
     snprintf(string, stringLength, "%ld.%ld", integerPart, fractionalPart);
-    return string;
-}
-
-static char *longToString(long l) {
-    size_t length = numberOfDigitsInLong(l);
-    char *string = checkedMalloc(length + 1);
-    snprintf(string, length, "%ld", l);
     return string;
 }
 

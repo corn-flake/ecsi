@@ -57,9 +57,7 @@ typedef enum {
 } ASTNodeType;
 
 typedef struct ASTNode {
-    size_t line;
-    size_t length;
-    char const *start;
+    Token originatingToken;
     ASTNodeType type;
 } ASTNode;
 
@@ -69,7 +67,8 @@ typedef struct {
     Token *current;
     bool hadError;
     bool panicMode;
-    ASTNode ast;
+    // ASTNode ast;
+    Value ast;
 } Parser;
 
 extern Parser parser;

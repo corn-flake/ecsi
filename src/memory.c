@@ -21,6 +21,7 @@
 
 #include <stdlib.h>
 
+#include "common.h"
 #include "compiler.h"
 #include "object.h"
 #include "parser.h"
@@ -117,6 +118,11 @@ void freeObjects(void) {
     Obj *object = vm.objects;
     while (object != NULL) {
         Obj *next = object->next;
+#ifdef DEBUG_FREE_OBJECTS
+        printf("Freeing object at %p\n", (void *)object);
+        printObject(OBJ_VAL(object));
+        puts("");
+#endif
         freeObject(object);
         object = next;
     }

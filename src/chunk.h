@@ -77,7 +77,7 @@ void initChunk(Chunk *chunk);
 
 // Adds byte to chunk's code, and records that byte originated from line of the
 // source code.
-void writeChunk(Chunk *chunk, uint8_t byte, int line);
+void writeChunk(Chunk *chunk, uint8_t byte, unsigned int line);
 
 /*
   Frees the memory associated with the chunk at chunk. Does not free the data

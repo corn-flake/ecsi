@@ -36,7 +36,7 @@ void initChunk(Chunk *chunk) {
     initLineNumberArray(&chunk->lines);
 }
 
-void writeChunk(Chunk *chunk, uint8_t byte, int line) {
+void writeChunk(Chunk *chunk, uint8_t byte, unsigned int line) {
     if (chunk->capacity < chunk->count + 1) {
         int oldCapacity = chunk->capacity;
         chunk->capacity = GROW_CAPACITY(oldCapacity);
@@ -45,7 +45,7 @@ void writeChunk(Chunk *chunk, uint8_t byte, int line) {
     }
 
     chunk->code[chunk->count] = byte;
-    int writtenLine = writeNumber(&chunk->lines, line);
+    unsigned int writtenLine = writeNumber(&chunk->lines, line);
     assert(line == writtenLine);
     chunk->count++;
 }
@@ -65,7 +65,10 @@ int addConstant(Chunk *chunk, Value value) {
 }
 
 int getLine(Chunk *chunk, int offset) {
-    int entriesCount = numberOfEntries(&chunk->lines);
+    // TODO: Change offset to a size_t
+    assert(offset >= 0);
+
+    size_t entriesCount = numberOfEntries(&chunk->lines);
     /*
       No entries indicates no data in the chunk, and that's a
       chunk state that getLine shouldn't be called in, so we return
@@ -73,8 +76,8 @@ int getLine(Chunk *chunk, int offset) {
     */
     if (0 == entriesCount) return -1;
 
-    int counter = 0;
-    int entryIndex = 0;
+    size_t counter = 0;
+    size_t entryIndex = 0;
 
     // We create a variable to store this to prevent
     // re-typing chunk->lines.lineNumbers.
@@ -84,7 +87,7 @@ int getLine(Chunk *chunk, int offset) {
     for (; entryIndex < entriesCount; entryIndex++) {
         currentEntry = entries[entryIndex];
 
-        if (counter + currentEntry.repeats >= offset) {
+        if (counter + currentEntry.repeats >= (size_t)offset) {
             return currentEntry.lineNumber;
         } else {
             counter += currentEntry.repeats;

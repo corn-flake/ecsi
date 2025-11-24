@@ -38,10 +38,10 @@
 
 VM vm;
 
-static InterpretResult run();
+static InterpretResult run(void);
 static void runtimeError(char const *format, ...);
 static Value clockNative(int argCount, Value *args);
-static void resetStack();
+static void resetStack(void);
 static void defineNative(char const *name, NativeFn function);
 static Value peek(int distance);
 static bool isFalsey(Value value);
@@ -50,7 +50,7 @@ static bool call(ObjClosure *closure, int argCount);
 static ObjUpvalue *captureUpvalue(Value *local);
 static void closeUpvalues(Value *last);
 
-void initVM() {
+void initVM(void) {
     vm.stackTop = vm.stack = NULL;
     vm.stackCapacity = 0;
     vm.objects = NULL;
@@ -103,7 +103,8 @@ static void runtimeError(char const *format, ...) {
     resetStack();
 }
 
-static void resetStack() {
+static void resetStack(void) {
+    free(vm.stack);
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
     vm.openUpvalues = NULL;
@@ -135,9 +136,9 @@ void push(Value value) {
 #endif
 }
 
-Value pop() {
+Value pop(void) {
     // The stack should never underflow because we control it.
-    assert(vm.stackTop >= vm.stack);
+    assert(vm.stackTop > vm.stack);
 
     vm.stackTop--;
 
@@ -149,7 +150,7 @@ Value pop() {
     return *vm.stackTop;
 }
 
-void freeVM() {
+void freeVM(void) {
     resetStack();
     freeTable(&vm.globals);
     freeTable(&vm.strings);
@@ -157,7 +158,7 @@ void freeVM() {
     freeObjects();
 }
 
-void printStack() {
+void printStack(void) {
     for (Value *slot = vm.stack; slot < vm.stackTop; slot++) {
         printf("[ ");
         printValue(*slot);
@@ -165,8 +166,8 @@ void printStack() {
     }
 }
 
-static InterpretResult run() {
-    CallFrame *frame = &vm.frames[vm.frameCount - 1];
+static InterpretResult run(void) {
+    CallFrame *frame = &(vm.frames[vm.frameCount - 1]);
 
 #define READ_BYTE() (*frame->ip++)
 
@@ -194,7 +195,7 @@ static InterpretResult run() {
         printStack();
         printf("\n");
         disassembleInstruction(
-            &frame->closure->function->chunk,
+            &(frame->closure->function->chunk),
             (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
         uint8_t instruction;

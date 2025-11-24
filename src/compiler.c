@@ -79,9 +79,7 @@ ClassCompiler *currentClass = NULL;
 
 Chunk *compilingChunk;
 
-static ExpressionType currentExpressionType();
-
-static Chunk *currentChunk() { return &current->function->chunk; }
+static Chunk *currentChunk(void) { return &current->function->chunk; }
 
 static void emitByte(uint8_t byte) {
     writeChunk(currentChunk(), byte, parser.previous->line);
@@ -502,16 +500,7 @@ static void funDeclaration() {
 }
 */
 
-static void expression() {
-    switch (currentExpressionType()) {
-        case EXPR_CALL:
-            return;
-        default:
-            return;
-    }
-}
-
-static ExpressionType currentExpressionType() { return EXPR_CALL; }
+static void expression(void) { return; }
 
 /*
 static void statement() {
@@ -569,7 +558,7 @@ ObjFunction *compile(char const *source) {
     freeTokenArray(&tokens);
 
     Compiler compiler;
-    initCompiler(&compiler, TYPE_SCRIPT, parser.ast);
+    initCompiler(&compiler, TYPE_SCRIPT, NIL_VAL);
 
     /*
     parser.hadError = false;
