@@ -2,3 +2,5 @@ build/*
 unity/*
 *~
 *.idx
+.cache/*
+.gdbhistory
