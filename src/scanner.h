@@ -24,6 +24,15 @@
 
 #include "object.h"
 
+// A slice of source code.
+typedef struct {
+    size_t line;    // The line the code is on.
+    size_t length;  // The number of characters in the slice.
+    // The address of the first character of the slice in the
+    // source code string.
+    char const *start;
+} SourceLocation;
+
 // The type of a token.
 typedef enum {
     // Keywords
@@ -80,11 +89,15 @@ char const *tokenTypeToString(TokenType type);
 
 // A token of code.
 typedef struct {
-    TokenType type;     // Token type
-    char const *start;  // Pointer to first character in source code array.
-    size_t length;      // How long the token's text is.
-    size_t line;        // The line the token was found on.
+    TokenType type;           // Token type
+    SourceLocation location;  // Location in source code;
 } Token;
+
+// Get the line of a token
+size_t tokenGetLine(Token const *token);
+size_t tokenGetLength(Token const *token);
+char const *tokenGetStart(Token const *token);
+TokenType tokenGetType(Token const *token);
 
 // Print a token
 void printToken(Token const *token);

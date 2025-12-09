@@ -206,11 +206,9 @@ static InterpretResult run(void) {
                 break;
             }
             case OP_CONSTANT_LONG: {
-                int constantIndex = READ_BYTE();
-                constantIndex = constantIndex << 8;
-                constantIndex += READ_BYTE();
-                constantIndex = constantIndex << 8;
-                constantIndex += READ_BYTE();
+                uint32_t constantIndex = READ_SHORT();
+                constantIndex <<= 8;
+                constantIndex |= READ_BYTE();
                 Value constantValue = frame->closure->function->chunk.constants
                                           .values[constantIndex];
                 push(constantValue);

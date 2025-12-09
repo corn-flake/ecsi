@@ -23,28 +23,28 @@
 #include "../vm.h"
 #include "literals.h"
 #include "parser_operations.h"
+#include "scanner.h"
 
-static Value parseIf();
-static Value parseAnd();
-static Value parseOr();
-static Value parseLet();
-static Value parseBindingSpec();
-static Value parseCond();
-static Value parseDefine();
-static Value parseWhen();
-static Value parseUnless();
-static Value parseBegin();
-static Value parseLambda();
-static Value parseArgList();
+ExprLogical *parseLogical(void) {
+    while (!check(TOKEN_RIGHT_PAREN)) {
+    }
+}
+
+// static Value parseLet();
+// static Value parseBindingSpec();
+// static Value parseCond();
+// static Value parseDefine();
+// static Value parseWhen();
+// static Value parseUnless();
 
 /*
   Parses a cond clause, raising an error if *foundElse
   is true and it finds an else clause. It sets *foundElse
   to true if it finds an else clause.
 */
-static Value parseCondClause(bool *foundElse);
+// static Value parseCondClause(bool *foundElse);
 
-ParseFn getDerivedExpressionParseFn() {
+ParseDatumFn getDerivedExpressionParseFn(void) {
     if (!check(TOKEN_IDENTIFIER)) return NULL;
     if (currentTokenMatchesString("cond")) return parseCond;
     if (currentTokenMatchesString("let")) return parseLet;
@@ -58,7 +58,7 @@ ParseFn getDerivedExpressionParseFn() {
     if (currentTokenMatchesString("lambda")) return parseLambda;
     return NULL;
 }
-
+/*
 static Value parseIf() {
     if (parserMatch(TOKEN_RIGHT_PAREN)) {
         error("Expect expression after 'if'.");
@@ -93,12 +93,14 @@ static Value parseIf() {
 
     return ifExpr;
 }
+*/
 
-static Value parseAnd() { return parseListOfExpressions(); }
+ExprLogical *parseLogical(void) {
+    while (!check(TOKEN_RIGHT_PAREN)) {
+    }
+}
 
-static Value parseOr() { return parseListOfExpressions(); }
-
-static Value parseLet() {
+static Value parseLet(void) {
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'let'");
 
     Value bindings = parseListUsing(parseBindingSpec);

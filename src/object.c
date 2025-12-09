@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
 #include "memory.h"
 #include "table.h"
 #include "value.h"
@@ -110,8 +111,7 @@ const char *objTypeToString(ObjType type) {
         case OBJ_VECTOR:
             return "OBJ_VECTOR";
         default:
-            // Unreached.
-            return "";
+            UNREACHABLE();
     }
 }
 

@@ -20,11 +20,11 @@
 
 #include "../scanner.h"
 
-char peek();
-char peekNext();
-char advance();
+char peek(void);
+char peekNext(void);
+char advance(void);
 bool match(char expected);
 bool matchString(char const *string);
 Token makeToken(TokenType type);
 Token errorToken(char const *message);
-bool isAtEnd();
+bool isAtEnd(void);

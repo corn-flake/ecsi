@@ -18,17 +18,21 @@
 
 #pragma once
 
-#include "../value.h"
+#include "../parser.h"
 #include "parser_operations.h"
 
+ExprLiteral *makeLiteral(bool isQuoted, Value value);
+
 Value parseVectorUsing(ParseFn parse);
-Value symbol();
-Value parseBytevector();
-Value parseNumber();
-Value parseBoolean();
-Value parseCharacter();
-Value parseString();
-Value parseNumberNoCheck();
-Value parseBooleanNoCheck();
-Value parseCharacterNoCheck();
-Value parseStringNoCheck();
+ExprLiteral *symbol(void);
+
+ExprLiteral *parseBytevector(void);
+ExprLiteral *parseNumber(void);
+ExprLiteral *parseBoolean(void);
+ExprLiteral *parseCharacter(void);
+ExprLiteral *parseString(void);
+ExprLiteral *parseNumberNoCheck(void);
+ExprLiteral *parseBooleanNoCheck(void);
+ExprLiteral *parseCharacterNoCheck(void);
+ExprLiteral *parseStringNoCheck(void);
+ExprLiteral *parseVector(void);

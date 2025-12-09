@@ -23,8 +23,15 @@
 
 #include "../scanner.h"
 #include "../value.h"
+#include "parser.h"
 
-typedef Value (*ParseFn)(void);
+typedef Value (*ParseDatumFn)(void);
+typedef Expr *(*ParseFn)(void);
+
+Expr *allocateExpr(size_t size, ExprType type, SourceLocation location);
+
+#define ALLOCATE_EXPR(type, exprType, location) \
+    (type *)allocateExpr(sizeof(type), exprType, location)
 
 void formattedErrorAt(Token const *token, char const *format, ...);
 void varArgsFormattedErrorAt(Token const *token, char const *format,
@@ -37,22 +44,26 @@ void error(char const *message);
 void errorAtCurrent(char const *message);
 void consume(TokenType type, char const *message);
 
-void parserAdvance();
+void parserAdvance(void);
 bool parserMatch(TokenType type);
 bool matchToken(Token const *token);
 bool check(TokenType type);
 bool checkToken(Token const *token);
-bool parserIsAtEnd();
+bool parserIsAtEnd(void);
 
-bool canContinueList();
+bool canContinueList(void);
 bool tokenMatchesString(Token *token, char *const string);
 bool previousTokenMatchesString(char *const string);
 bool currentTokenMatchesString(char *const string);
 
-Value parseListUsing(ParseFn parse);
+#define CURRENT_LOCATION() (parser.current.location)
+#define CURRENT_LINE() (tokenGetLine(&(parser.current)))
+#define CURRENT_TYPE() (tokenGetType(&(parser.current)))
+
+Value parseListUsing(ParseDatumFn parse);
 // n == -1 indicates to parse until a right paren is found.
-Value parseNExprsIntoList(ParseFn parse, int n);
+Value parseNExprsIntoList(ParseDatumFn parse, int n);
 
 // n is unsigned because 'parse list of at least -1' makes no sense.
-Value parseAtLeastNExprsUsing(ParseFn parse, size_t n);
-Value parseListOfExpressions();
+Value parseAtLeastNExprsUsing(ParseDatumFn parse, size_t n);
+Value parseListOfExpressions(void);

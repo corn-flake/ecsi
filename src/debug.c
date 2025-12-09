@@ -21,7 +21,6 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "chunk.h"
 #include "object.h"
@@ -38,6 +37,9 @@ static int simpleInstruction(char const *name, int offset);
   in a 4 character field, then a single space character.
  */
 static void printInstructionNameAndOperand(char const *name, uint32_t operand);
+
+// Prints value using printValue in single quotes, then prints a newline.
+static void printValueInQuotesAtEndOfLine(Value value);
 
 /*
   Prints the 2-byte instruction at offset in chunk, labeling it as name, and
@@ -162,19 +164,19 @@ static int constantInstruction(const char *name, Chunk const *chunk,
                                int offset) {
     uint8_t constant = chunk->code[offset + 1];
     printInstructionNameAndOperand(name, constant);
-    putchar('\'');
-    printValue(chunk->constants.values[constant]);
-    puts("'");
+    printValueInQuotesAtEndOfLine(chunk->constants.values[constant]);
     return offset + 2;
 }
 
 static int constantLongInstruction(char const *name, Chunk const *chunk,
                                    int offset) {
     /*
-      This shifting and or-ing code is necessary instead of something
-      like casting chunk->code to a uint32_t * and derefencing, then masking,
-      or using memcpy because I think my computer is flipping the bytes somehow.
-      When I used casting or memcpy, the bytes ended up in flipped order.
+      This shifting and or-ing is preferred to using memcpy or casting the
+      chunk->code to a 4-byte type and dereferencing because those methods give
+      the bytes back in the wrong endianness and they then need to be flipped
+      using something like htonl.
+      This is a clearer method and it's consistent with how jumpInstruction
+      parses its operand.
     */
 
     uint32_t constantIndex = (uint32_t)(chunk->code[offset + 1] << 8);
@@ -182,18 +184,15 @@ static int constantLongInstruction(char const *name, Chunk const *chunk,
     constantIndex <<= 8;
     constantIndex |= chunk->code[offset + 3];
 
-    uint32_t constantIndexMemcpy = 0;
-    memcpy(&constantIndexMemcpy, chunk->code + offset + 1, 3);
-
-    printf("\nmemcpy: 0x%08X\nshifting: 0x%08X\n", constantIndexMemcpy,
-           constantIndex);
-
-    Value constantValue = chunk->constants.values[constantIndex];
     printInstructionNameAndOperand(name, constantIndex);
-    putchar('\'');
-    printValue(constantValue);
-    puts("'");
+    printValueInQuotesAtEndOfLine(chunk->constants.values[constantIndex]);
     return offset + 4;
+}
+
+static void printValueInQuotesAtEndOfLine(Value value) {
+    putchar('\'');
+    printValue(value);
+    puts("'");
 }
 
 static void printInstructionNameAndOperand(char const *name, uint32_t operand) {

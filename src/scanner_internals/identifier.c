@@ -48,15 +48,15 @@ Token identifier(IdentifierVariant variant) {
 }
 
 static TokenType keywordType(Token const *token) {
-    switch (token->start[0]) {
+    switch (tokenGetStart(token)[0]) {
         case 'a':
             return checkKeyword(1, 2, "nd", TOKEN_AND);
         case 'b':
             return checkKeyword(1, 4, "egin", TOKEN_BEGIN);
         case 'c':
-            switch (token->start[1]) {
+            switch (tokenGetStart(token)[1]) {
                 case 'a':
-                    if (token->length != 11) {
+                    if (tokenGetLength(token) != 11) {
                         return checkKeyword(2, 2, "se", TOKEN_CASE);
                     }
                     return checkKeyword(2, 9, "se-lambda", TOKEN_CASE_LAMBDA);
@@ -65,7 +65,7 @@ static TokenType keywordType(Token const *token) {
             }
             break;
         case 'd':
-            switch (token->length) {
+            switch (tokenGetLength(token)) {
                 case 2:
                     return checkKeyword(1, 1, "o", TOKEN_DO);
                 case 5:
@@ -83,11 +83,11 @@ static TokenType keywordType(Token const *token) {
         case 'i':
             return checkKeyword(1, 1, "f", TOKEN_IF);
         case 'l':
-            if ('a' == token->start[1]) {
+            if ('a' == tokenGetStart(token)[1]) {
                 return checkKeyword(1, 5, "ambda", TOKEN_LAMBDA);
             }
 
-            switch (token->length) {
+            switch (tokenGetLength(token)) {
                 case 3:
                     return checkKeyword(1, 2, "et", TOKEN_LET);
                 case 6:
@@ -108,6 +108,8 @@ static TokenType keywordType(Token const *token) {
             return checkKeyword(1, 1, "r", TOKEN_OR);
         case 'p':
             return checkKeyword(1, 11, "arameterize", TOKEN_PARAMETERIZE);
+        case 'q':
+            return checkKeyword(1, 4, "uote", TOKEN_QUOTE);
         case 's':
             return checkKeyword(1, 3, "et!", TOKEN_SET);
         case 'u':

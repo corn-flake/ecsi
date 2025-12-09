@@ -18,11 +18,11 @@
 
 #include "scanner_operations.h"
 
-char peek() { return isAtEnd() ? '\0' : *scanner.current; }
+char peek(void) { return isAtEnd() ? '\0' : *scanner.current; }
 
-char peekNext() { return isAtEnd() ? '\0' : scanner.current[1]; }
+char peekNext(void) { return isAtEnd() ? '\0' : scanner.current[1]; }
 
-char advance() {
+char advance(void) {
     scanner.current++;
     return scanner.current[-1];
 }
@@ -50,9 +50,12 @@ bool matchString(char const *string) {
 Token makeToken(TokenType type) {
     Token token = {
         .type = type,
-        .start = scanner.start,
-        .length = scanner.current - scanner.start,
-        .line = scanner.line,
+        .location =
+            {
+                .start = scanner.start,
+                .length = scanner.current - scanner.start,
+                .line = scanner.line,
+            },
     };
     return token;
 }
@@ -60,11 +63,14 @@ Token makeToken(TokenType type) {
 Token errorToken(char const *message) {
     Token token = {
         .type = TOKEN_ERROR,
-        .start = message,
-        .length = strlen(message),
-        .line = scanner.line,
+        .location =
+            {
+                .start = message,
+                .length = strlen(message),
+                .line = scanner.line,
+            },
     };
     return token;
 }
 
-bool isAtEnd() { return *scanner.current == '\0'; }
+bool isAtEnd(void) { return '\0' == *scanner.current; }

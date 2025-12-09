@@ -83,16 +83,16 @@ char const *tokenTypeToString(TokenType type) {
 
 void printToken(Token const *token) {
     printf("Token { .type = %s, .start = '%.*s', .line = %zu }\n",
-           tokenTypeToString(token->type), (int)token->length, token->start,
-           token->line);
+           tokenTypeToString(tokenGetType(token)), (int)tokenGetLength(token),
+           tokenGetStart(token), tokenGetLine(token));
 }
 
 ObjString *tokenToObjString(Token const *token) {
-    return copyString(token->start, token->length);
+    return copyString(tokenGetStart(token), tokenGetLength(token));
 }
 
 ObjSymbol *tokenToObjSymbol(Token const *token) {
-    return newSymbol(token->start, token->length);
+    return newSymbol(tokenGetStart(token), tokenGetLength(token));
 }
 
 void initTokenArray(TokenArray *tokenArray) {
@@ -196,3 +196,11 @@ void scanAllTokensInto(TokenArray *tokenArray) {
         addToken(tokenArray, token);
     } while (TOKEN_EOF != token.type);
 }
+
+size_t tokenGetLine(Token const *token) { return token->location.line; }
+
+size_t tokenGetLength(Token const *token) { return token->location.length; }
+
+char const *tokenGetStart(Token const *token) { return token->location.start; }
+
+TokenType tokenGetType(Token const *token) { return token->type; }

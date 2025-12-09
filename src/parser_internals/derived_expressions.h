@@ -1,4 +1,8 @@
-#include "../value.h"
+#include "parser.h"
 #include "parser_operations.h"
 
-ParseFn getDerivedExpressionParseFn();
+ParseDatumFn getDerivedExpressionParseFn(void);
+
+ExprLogical *parseLogical(void);
+ExprWhenUnless *parseWhenUnless(void);
+ExprBegin *parseBegin(void);

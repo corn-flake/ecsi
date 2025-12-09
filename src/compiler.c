@@ -539,23 +539,17 @@ static ObjFunction *compileValue(Value value) { return NULL; }
 
 ObjFunction *compile(char const *source) {
     initScanner(source);
-    TokenArray tokens;
-    initTokenArray(&tokens);
-    scanAllTokensInto(&tokens);
+    initParser();
 
-    initParser(tokens);
-
-    Value allTokens = parseAllTokens();
+    AST ast = parseAllTokens();
 
     if (!parser.hadError) {
-        printValue(allTokens);
+        printAST(ast);
         puts("");
     } else {
         puts("Not printing ast, parser had error.");
         return NULL;
     }
-
-    freeTokenArray(&tokens);
 
     Compiler compiler;
     initCompiler(&compiler, TYPE_SCRIPT, NIL_VAL);
@@ -572,6 +566,7 @@ ObjFunction *compile(char const *source) {
     ObjFunction *function = endCompiler();
     return parser.hadError ? NULL : function;
     */
+    freeAST(ast);
     return NULL;
 }
 

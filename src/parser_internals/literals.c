@@ -23,7 +23,9 @@
 #include "parser_operations.h"
 #include "token_to_type.h"
 
-static Value parseBytevectorElement();
+static Value parseBytevectorElement(void);
+
+static ExprLiteral *makeNonQuotedLiteral(Value value);
 
 Value parseVectorUsing(ParseFn parse) {
     ObjVector *vector = newVector();
@@ -42,72 +44,76 @@ Value parseVectorUsing(ParseFn parse) {
     return OBJ_VAL(vector);
 }
 
-Value symbol() {
-    Value sym = OBJ_VAL(tokenToObjSymbol(parser.current));
+ExprLiteral *symbol(void) {
+    Value sym = OBJ_VAL(tokenToObjSymbol(&(parser.current)));
     parserAdvance();
-    return sym;
+    return makeLiteral(true, sym);
 }
 
-Value parseNumber() {
+ExprLiteral *parseNumber(void) {
     if (!check(TOKEN_NUMBER)) {
         errorAtCurrent("Expect number.");
     }
     return parseNumberNoCheck();
 }
 
-Value parseBoolean() {
+ExprLiteral *parseBoolean(void) {
     if (!check(TOKEN_BOOLEAN)) {
         errorAtCurrent("Expect boolean.");
     }
     return parseBooleanNoCheck();
 }
 
-Value parseCharacter() {
+ExprLiteral *parseCharacter(void) {
     if (!check(TOKEN_CHARACTER)) {
         errorAtCurrent("Expect character.");
     }
     return parseCharacterNoCheck();
 }
 
-Value parseString() {
+ExprLiteral *parseString(void) {
     if (!check(TOKEN_STRING)) {
         errorAtCurrent("Expect string.");
     }
     return parseStringNoCheck();
 }
 
-Value parseNumberNoCheck() {
-    Value num = NUMBER_VAL(numberTokenToDouble(parser.current));
+ExprLiteral *parseNumberNoCheck(void) {
+    Value num = NUMBER_VAL(numberTokenToDouble(&(parser.current)));
     parserAdvance();
-    return num;
+    return makeNonQuotedLiteral(num);
 }
 
-Value parseBooleanNoCheck() {
-    Value b = BOOL_VAL(booleanTokenToBool(parser.current));
+ExprLiteral *parseBooleanNoCheck(void) {
+    Value b = BOOL_VAL(booleanTokenToBool(&(parser.current)));
     parserAdvance();
-    return b;
-}
-Value parseCharacterNoCheck() {
-    Value c = CHARACTER_VAL(characterTokenToChar(parser.current));
-    parserAdvance();
-    return c;
-}
-Value parseStringNoCheck() {
-    Value s = OBJ_VAL(tokenToObjString(parser.current));
-    parserAdvance();
-    return s;
+    return makeNonQuotedLiteral(b);
 }
 
-Value parseBytevector() { return parseVectorUsing(parseBytevectorElement); }
+ExprLiteral *parseCharacterNoCheck(void) {
+    Value c = CHARACTER_VAL(characterTokenToChar(&(parser.current)));
+    parserAdvance();
+    return makeNonQuotedLiteral(c);
+}
 
-static Value parseBytevectorElement() {
+ExprLiteral *parseStringNoCheck(void) {
+    Value s = OBJ_VAL(tokenToObjString(&(parser.current)));
+    parserAdvance();
+    return makeNonQuotedLiteral(s);
+}
+
+ExprLiteral *parseBytevector(void) {
+    return makeNonQuotedLiteral(parseVectorUsing(parseBytevectorElement));
+}
+
+static Value parseBytevectorElement(void) {
     if (!parserMatch(TOKEN_NUMBER)) {
         errorAtCurrent(
             "Members of bytevector must be numbers between 0 "
             "and 255 inclusive.");
     }
 
-    double maybeByte = numberTokenToDouble(parser.previous);
+    double maybeByte = numberTokenToDouble(&(parser.previous));
     if (!IS_EXACT_INTEGER(NUMBER_VAL(maybeByte))) {
         error("Members of bytevector must be exact integers.");
     }
@@ -121,4 +127,20 @@ static Value parseBytevectorElement() {
     }
 
     return NUMBER_VAL(maybeByte);
+}
+
+ExprLiteral *parseVector(void) {
+    return makeNonQuotedLiteral(parseVectorUsing(parseDatum));
+}
+
+ExprLiteral *makeLiteral(bool isQuoted, Value value) {
+    ExprLiteral *literal =
+        ALLOCATE_EXPR(ExprLiteral, EXPR_LITERAL, currentLocation());
+    literal->isQuotation = isQuoted;
+    literal->value = value;
+    return literal;
+}
+
+static ExprLiteral *makeNonQuotedLiteral(Value value) {
+    return makeLiteral(false, value);
 }

@@ -32,21 +32,21 @@ typedef enum {
     EXPR_LAMBDA,
     EXPR_IF,
     EXPR_SET,
-    EXPR_COND,
     EXPR_AND,
     EXPR_OR,
     EXPR_WHEN,
     EXPR_UNLESS,
-    EXPR_LET,
+    EXPR_BEGIN,
 
     // Unimplemented
+    EXPR_LET,
+    EXPR_COND,
     EXPR_LET_STAR,
     EXPR_CASE,
     EXPR_LETREC,
     EXPR_LETREC_STAR,
     EXPR_LET_VALUES,
     EXPR_LET_STAR_VALUES,
-    EXPR_BEGIN,
     EXPR_DO,
     EXPR_DELAY,
     EXPR_DELAY_FORCE,
@@ -54,27 +54,119 @@ typedef enum {
     EXPR_GUARD,
     EXPR_QUASIQUOTATION,
     EXPR_CASE_LAMBDA,
-} ASTNodeType;
-
-typedef struct ASTNode {
-    Token originatingToken;
-    ASTNodeType type;
-} ASTNode;
+} ExprType;
 
 typedef struct {
-    TokenArray tokens;
-    Token *previous;
-    Token *current;
+    ExprType type;
+    SourceLocation location;
+} Expr;
+
+typedef struct {
+    size_t count;
+    size_t capacity;
+    Expr **exprs;
+} ExprPointerArray;
+
+typedef struct {
+    Expr expr;
+    ExprPointerArray expressions;
+} ExprSequence;
+
+typedef ExprSequence ExprBegin;
+
+typedef struct {
+    Expr expr;
+    ExprPointerArray definitions;
+    ExprSequence *sequence;
+} ExprBody;
+
+typedef struct {
+    Expr expr;
+} ExprIdentifier;
+
+typedef struct {
+    Expr expr;
+    Value value;
+    bool isQuotation;
+} ExprLiteral;
+
+typedef struct {
+    Expr expr;
+    Expr *operator;
+    size_t numOperands;
+    Expr **operands;
+} ExprCall;
+
+typedef struct {
+    Expr expr;
+    size_t numFormals;
+    ExprIdentifier **formals;
+    size_t numExprsInBody;
+    Expr **body;
+} ExprLambda;
+
+typedef struct {
+    Expr expr;
+    Expr *test;
+    Expr *consequent;
+    Expr *alternate;
+} ExprIf;
+
+typedef struct {
+    Expr expr;
+    ExprIdentifier *target;
+    Expr *expression;
+} ExprSet;
+
+typedef struct {
+    Expr expr;
+    size_t numTests;
+    Expr **tests;
+} ExprLogical;
+
+typedef ExprLogical ExprOr;
+typedef ExprLogical ExprAnd;
+
+typedef struct {
+    Expr expr;
+    Expr *test;
+    ExprSequence *sequence;
+} ExprWhenUnless;
+
+#define EXPR_TYPE(expr) ((expr)->type)
+#define IS_IDENTIFIER(expr) (EXPR_IDENTIFIER == EXPR_TYPE(expr))
+#define IS_CALL(expr) (EXPR_CALL == EXPR_TYPE(expr))
+#define IS_LAMBDA(expr) (EXPR_LAMBDA == EXPR_TYPE(expr))
+#define IS_IF(expr) (EXPR_IF == EXPR_TYPE(expr))
+#define IS_SET(expr) (EXPR_SET == EXPR_TYPE(expr))
+#define IS_AND(expr) (EXPR_AND == EXPR_TYPE(expr))
+#define IS_OR(expr) (EXPR_OR == EXPR_TYPE(expr))
+
+#define AS_IDENTIFIER(expr) ((ExprIdentifier *)(expr))
+#define AS_CALL(expr) ((ExprCall *)(expr))
+#define AS_LAMBDA(expr) ((ExprLambda *)(expr))
+#define AS_IF(expr) ((ExprIf *)(expr))
+#define AS_SET(expr) ((ExprSet *)(expr))
+#define AS_AND(expr) ((ExprAnd *)(expr))
+#define AS_OR(expr) ((ExprOr *)(expr))
+
+typedef struct {
+    size_t count, capacity;
+    Expr **exprs;
+} AST;
+
+typedef struct {
+    Token previous;
+    Token current;
     bool hadError;
     bool panicMode;
-    // ASTNode ast;
-    Value ast;
+    AST ast;
 } Parser;
 
 extern Parser parser;
 
-void initParser(TokenArray tokens);
-void markParserRoots();
-Value parseExpression();
-Value parseDatum();
-Value parseAllTokens();
+void initParser(void);
+Expr *parseExpression(void);
+Value parseDatum(void);
+AST parseAllTokens(void);
+void freeAST(AST ast);

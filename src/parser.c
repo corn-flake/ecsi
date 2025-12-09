@@ -36,73 +36,73 @@
 
 Parser parser;
 
-static void appendToAst(Value value);
-static void synchronize(void);
-static Value parseListBasedExpression(void);
-static Value parseQuotation(void);
+#define PLACEHOLDER_LOCATION \
+    ((SourceLocation){.start = NULL, .length = 0, .line = CURRENT_LINE()})
 
-void initParser(TokenArray tokens) {
-    parser.tokens = tokens;
-    parser.previous = tokens.array;
-    parser.current = tokens.array;
+static void appendToAst(Expr const *expr);
+static void synchronize(void);
+static Expr *parseListBasedExpression(void);
+static ExprLiteral *parseQuotation(void);
+static void initAST(AST *ast);
+
+static ExprCall *parseCall(void);
+static ExprLambda *parseLambda(void);
+static ExprIf *parseIf(void);
+static ExprSet *parseSet(void);
+
+void initParser(void) {
+    parser.current = scanToken();
+    parser.previous = parser.current;
     parser.hadError = false;
     parser.panicMode = false;
-    parser.ast = NIL_VAL;
+    initAST(&(parser.ast));
 }
 
-void markParserRoots(void) { markValue(parser.ast); }
+static void initAST(AST *ast) {
+    ast->count = ast->capacity = 0;
+    ast->exprs = NULL;
+}
 
-Value parseAllTokens(void) {
+AST parseAllTokens(void) {
     while (!check(TOKEN_EOF)) {
         appendToAst(parseExpression());
     }
     return parser.ast;
 }
 
-Value parseExpression(void) {
-    Value value = NIL_VAL;
-
-    switch (parser.current->type) {
-        // Literals
-        // Self evaluating values
+Expr *parseExpression(void) {
+    switch (CURRENT_TYPE()) {
+            // Literals
+            // Self evaluating values
         case TOKEN_BOOLEAN:
-            value = parseBooleanNoCheck();
-            break;
+            return (Expr *)parseBooleanNoCheck();
         case TOKEN_NUMBER:
-            value = parseNumberNoCheck();
-            break;
+            return (Expr *)parseNumberNoCheck();
         case TOKEN_CHARACTER:
-            value = parseCharacterNoCheck();
-            break;
+            return (Expr *)parseCharacterNoCheck();
         case TOKEN_STRING:
-            value = parseStringNoCheck();
-            break;
+            return (Expr *)parseStringNoCheck();
         case TOKEN_POUND_LEFT_PAREN:
             parserAdvance();
-            value = parseVectorUsing(parseExpression);
-            break;
+            return (Expr *)parseVector();
         case TOKEN_POUND_U8_LEFT_PAREN:
             parserAdvance();
-            value = parseBytevector();
-            break;
+            return (Expr *)parseBytevector();
 
             // Quotation
         case TOKEN_QUOTE:
             // Read the quote
             parserAdvance();
-            value = parseQuotation();
-            break;
+            return (Expr *)parseQuotation();
 
             // Identifiers
         case TOKEN_IDENTIFIER:
-            value = symbol();
-            break;
+            return (Expr *)ALLOCATE_EXPR(ExprIdentifier, EXPR_IDENTIFIER,
+                                         CURRENT_LOCATION());
 
-        case TOKEN_LEFT_PAREN: {
+        case TOKEN_LEFT_PAREN:
             parserAdvance();
-            value = parseListBasedExpression();
-            break;
-        }
+            return parseListBasedExpression();
 
         case TOKEN_RIGHT_PAREN:
             errorAtCurrent("Unexpected right parenthesis.");
@@ -111,54 +111,49 @@ Value parseExpression(void) {
 
         default:
             fprintf(stderr, "TODO: parse %s tokens.\n",
-                    tokenTypeToString(parser.current->type));
+                    tokenTypeToString(tokenGetType(&(parser.current))));
     }
 
     if (parser.panicMode) synchronize();
     return value;
 }
 
-static Value parseListBasedExpression() {
-    ParseFn parse = getDerivedExpressionParseFn();
+static Expr *parseListBasedExpression(void) {
+    TokenType previousType = tokenGetType(&(parser.current));
+    parserAdvance();
 
-    // Derived expression
-    if (NULL != parse) {
-        Value expr = guardedCons(symbol(), NIL_VAL);
-
-        push(expr);
-        Value rest = parse();
-        pop();  // expr
-
-        SET_CDR(expr, rest);
-
-        return expr;
-    }
-
-    // Procedure call
-    return parseListOfExpressions();
-}
-
-static Value parseQuotation() {
-    size_t const QUOTE_LEN = 5;
-    Value quoteSymbol = OBJ_VAL(newSymbol("quote", QUOTE_LEN));
-    Value list = guardedCons(quoteSymbol, NIL_VAL);
-
-    push(list);
-    Value expr = parseExpression();
-    pop();  // list
-
-    guardedAppend(list, expr);
-
-    return list;
-}
-
-static void appendToAst(Value value) {
-    if (IS_NIL(parser.ast)) {
-        parser.ast = guardedCons(value, NIL_VAL);
-    } else {
-        guardedAppend(parser.ast, value);
+    switch (previousType) {
+        case TOKEN_QUOTE:
+            parserAdvance();
+            return (Expr *)parseQuotation();
+        case TOKEN_IF:
+            return (Expr *)parseIf();
+        case TOKEN_SET:
+            return (Expr *)parseSet();
+        case TOKEN_LAMBDA:
+            return (Expr *)parseLambda();
+        case TOKEN_AND:
+        case TOKEN_OR:
+            return (Expr *)parseLogical();
+        case TOKEN_WHEN:
+        case TOKEN_UNLESS:
+            return (Expr *)parseWhenUnless();
+        case TOKEN_BEGIN:
+            return (ExprBegin *)parseBegin();
+        default:
+            return (Expr *)parseCall();
     }
 }
+
+static ExprCall *parseCall(void) {
+    ExprCall *call = ALLOCATE_EXPR(ExprCall, EXPR_CALL, PLACEHOLDER_LOCATION);
+}
+
+static ExprLiteral *parseQuotation(void) {
+    return makeLiteral(true, parseDatum());
+}
+
+static void appendToAst(AST *ast) { return; }
 
 static void synchronize() {
     parser.panicMode = false;
