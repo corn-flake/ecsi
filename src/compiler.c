@@ -82,7 +82,7 @@ Chunk *compilingChunk;
 static Chunk *currentChunk(void) { return &current->function->chunk; }
 
 static void emitByte(uint8_t byte) {
-    writeChunk(currentChunk(), byte, parser.previous->line);
+    writeChunk(currentChunk(), byte, tokenGetLine(&(parser.previous)));
 }
 
 static void emit2Bytes(uint8_t byte1, uint8_t byte2) {
@@ -106,10 +106,10 @@ static int emitJump(uint8_t instruction) {
     emitByte(instruction);
     emitByte(0xff);
     emitByte(0xff);
-    return currentChunk()->count - 2;
+    return getChunkCount(currentChunk()) - 2;
 }
 
-static void emitReturn() {
+static void emitReturn(void) {
     if (current->type == TYPE_INITIALIZER) {
         emit2Bytes(OP_GET_LOCAL, 0);
     } else {
@@ -166,24 +166,25 @@ static void initCompiler(Compiler *compiler, FunctionType type, Value ast) {
     current = compiler;
     if (type != TYPE_SCRIPT) {
         current->function->name =
-            copyString(parser.previous->start, parser.previous->length);
+            copyString(tokenGetStart(&(parser.previous)),
+                       tokenGetLength(&(parser.previous)));
     }
 
     Local *local = &current->locals[current->localCount++];
     local->depth = 0;
     local->isCaptured = false;
     if (type != TYPE_FUNCTION) {
-        local->name.start = "this";
-        local->name.length = 4;
+        local->name.location.start = "this";
+        local->name.location.length = 4;
     } else {
-        local->name.start = "";
-        local->name.length = 0;
+        local->name.location.start = "";
+        local->name.location.length = 0;
     }
 
     compiler->ast = ast;
 }
 
-static ObjFunction *endCompiler() {
+static ObjFunction *endCompiler(void) {
     emitReturn();
     ObjFunction *function = current->function;
 
@@ -199,9 +200,9 @@ static ObjFunction *endCompiler() {
     return function;
 }
 
-static void beginScope() { current->scopeDepth++; }
+static void beginScope(void) { current->scopeDepth++; }
 
-static void endScope() {
+static void endScope(void) {
     current->scopeDepth--;
     while (current->localCount > 0 &&
            current->locals[current->localCount - 1].depth >
@@ -487,7 +488,14 @@ static void variable(bool canAssign) {
 
 static Token syntheticToken(char const *text) {
     Token token = {
-        .type = TOKEN_IDENTIFIER, .start = text, .length = (int)strlen(text)};
+        .type = TOKEN_IDENTIFIER,
+        .location =
+            {
+                .start = text,
+                .length = strlen(text),
+                .line = 0,
+            },
+    };
     return token;
 }
 
@@ -570,7 +578,7 @@ ObjFunction *compile(char const *source) {
     return NULL;
 }
 
-void markCompilerRoots() {
+void markCompilerRoots(void) {
     Compiler *compiler = current;
     while (compiler != NULL) {
         markObject((Obj *)compiler->function);

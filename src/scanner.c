@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "common.h"
 #include "memory.h"
 #include "object.h"
 #include "scanner_internals/character_type_tests.h"
@@ -74,10 +75,7 @@ char const *tokenTypeToString(TokenType type) {
         case TOKEN_EOF:
             return "TOKEN_EOF";
         default:
-            // Unreached.
-            fprintf(stderr, "tokenTypeToString (%d) - Unknown token type.\n",
-                    type);
-            assert(false);
+            UNREACHABLE();
     }
 }
 
@@ -93,29 +91,6 @@ ObjString *tokenToObjString(Token const *token) {
 
 ObjSymbol *tokenToObjSymbol(Token const *token) {
     return newSymbol(tokenGetStart(token), tokenGetLength(token));
-}
-
-void initTokenArray(TokenArray *tokenArray) {
-    tokenArray->count = 0;
-    tokenArray->capacity = 0;
-    tokenArray->array = NULL;
-}
-
-void addToken(TokenArray *tokenArray, Token token) {
-    if (tokenArray->count >= tokenArray->capacity) {
-        size_t oldCapacity = tokenArray->capacity;
-        tokenArray->capacity = GROW_CAPACITY(oldCapacity);
-        tokenArray->array = GROW_ARRAY(Token, tokenArray->array, oldCapacity,
-                                       tokenArray->capacity);
-    }
-    tokenArray->array[tokenArray->count] = token;
-    tokenArray->count++;
-}
-
-void freeTokenArray(TokenArray *tokenArray) {
-    FREE_ARRAY(Token, tokenArray->array, tokenArray->capacity);
-    tokenArray->capacity = 0;
-    tokenArray->count = 0;
 }
 
 void initScanner(char const *source) {
@@ -187,14 +162,6 @@ Token scanToken(void) {
     }
 
     return errorToken("Unexpected character.");
-}
-
-void scanAllTokensInto(TokenArray *tokenArray) {
-    Token token;
-    do {
-        token = scanToken();
-        addToken(tokenArray, token);
-    } while (TOKEN_EOF != token.type);
 }
 
 size_t tokenGetLine(Token const *token) { return token->location.line; }

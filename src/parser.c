@@ -39,11 +39,11 @@ Parser parser;
 #define PLACEHOLDER_LOCATION \
     ((SourceLocation){.start = NULL, .length = 0, .line = CURRENT_LINE()})
 
-static void appendToAst(Expr const *expr);
 static void synchronize(void);
 static Expr *parseListBasedExpression(void);
 static ExprLiteral *parseQuotation(void);
 static void initAST(AST *ast);
+static void appendToAST(AST *ast, Expr *expr);
 
 static ExprCall *parseCall(void);
 static ExprLambda *parseLambda(void);
@@ -59,8 +59,7 @@ void initParser(void) {
 }
 
 static void initAST(AST *ast) {
-    ast->count = ast->capacity = 0;
-    ast->exprs = NULL;
+    initSmartArray(ast, smartArrayCheckedRealloc, sizeof(Expr *));
 }
 
 AST parseAllTokens(void) {
@@ -115,52 +114,61 @@ Expr *parseExpression(void) {
     }
 
     if (parser.panicMode) synchronize();
-    return value;
+    return NULL;
 }
 
 static Expr *parseListBasedExpression(void) {
-    TokenType previousType = tokenGetType(&(parser.current));
-    parserAdvance();
 
-    switch (previousType) {
+    switch (CURRENT_TYPE()) {
         case TOKEN_QUOTE:
             parserAdvance();
             return (Expr *)parseQuotation();
         case TOKEN_IF:
+            parserAdvance();
             return (Expr *)parseIf();
         case TOKEN_SET:
+            parserAdvance();
             return (Expr *)parseSet();
         case TOKEN_LAMBDA:
+            parserAdvance();
             return (Expr *)parseLambda();
         case TOKEN_AND:
         case TOKEN_OR:
+            parserAdvance();
             return (Expr *)parseLogical();
         case TOKEN_WHEN:
         case TOKEN_UNLESS:
+            parserAdvance();
             return (Expr *)parseWhenUnless();
         case TOKEN_BEGIN:
-            return (ExprBegin *)parseBegin();
+            parserAdvance();
+            return (Expr *)parseBegin();
         default:
             return (Expr *)parseCall();
     }
 }
 
 static ExprCall *parseCall(void) {
-    ExprCall *call = ALLOCATE_EXPR(ExprCall, EXPR_CALL, PLACEHOLDER_LOCATION);
+    ExprCall *call = ALLOCATE_EXPR(ExprCall, EXPR_CALL, CURRENT_LOCATION());
+    call->operator = parseExpression();
+    call->operands = parseUntilRightParen();
+    return (Expr *)call;
 }
 
 static ExprLiteral *parseQuotation(void) {
     return makeLiteral(true, parseDatum());
 }
 
-static void appendToAst(AST *ast) { return; }
+static void appendToAst(AST *ast, Expr *expr) {
+    smartArrayAppend(ast, &expr);
+}
 
-static void synchronize() {
+static void synchronize(void) {
     parser.panicMode = false;
 
-    while (parser.current->type != TOKEN_EOF) {
-        if (TOKEN_RIGHT_PAREN == parser.previous->type) return;
-        if (TOKEN_LEFT_PAREN == parser.current->type) return;
+    while (!check(TOKEN_EOF)) {
+        if (TOKEN_RIGHT_PAREN == tokenGetType(&(parser.previous))) return;
+        if (check(TOKEN_LEFT_PAREN)) return;
         parserAdvance();
     }
 }

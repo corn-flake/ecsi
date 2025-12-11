@@ -61,11 +61,7 @@ typedef struct {
     SourceLocation location;
 } Expr;
 
-typedef struct {
-    size_t count;
-    size_t capacity;
-    Expr **exprs;
-} ExprPointerArray;
+typedef SmartArray ExprPointerArray;
 
 typedef struct {
     Expr expr;
@@ -93,16 +89,13 @@ typedef struct {
 typedef struct {
     Expr expr;
     Expr *operator;
-    size_t numOperands;
-    Expr **operands;
+    ExprPointerArray operands;
 } ExprCall;
 
 typedef struct {
     Expr expr;
-    size_t numFormals;
-    ExprIdentifier **formals;
-    size_t numExprsInBody;
-    Expr **body;
+    ExprPointerArray formals;
+    ExprPointerArray body;
 } ExprLambda;
 
 typedef struct {
@@ -120,8 +113,7 @@ typedef struct {
 
 typedef struct {
     Expr expr;
-    size_t numTests;
-    Expr **tests;
+    ExprPointerArray tests;
 } ExprLogical;
 
 typedef ExprLogical ExprOr;
@@ -150,10 +142,7 @@ typedef struct {
 #define AS_AND(expr) ((ExprAnd *)(expr))
 #define AS_OR(expr) ((ExprOr *)(expr))
 
-typedef struct {
-    size_t count, capacity;
-    Expr **exprs;
-} AST;
+typedef ExprPointerArray AST;
 
 typedef struct {
     Token previous;

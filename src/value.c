@@ -26,6 +26,7 @@
 
 #include "memory.h"
 #include "object.h"
+#include "smart_array.h"
 
 // Return heap-allocated string representation of b.
 static char *booleanToString(bool b);
@@ -70,32 +71,33 @@ bool valuesEqual(Value a, Value b) {
 }
 
 void initValueArray(ValueArray *array) {
-    array->values = NULL;
-    array->capacity = array->count = 0;
+    initSmartArray(array, reallocate, sizeof(Value));
 }
 
 void writeValueArray(ValueArray *array, Value value) {
-    if (array->capacity < array->count + 1) {
-        int oldCapacity = array->capacity;
-        array->capacity = GROW_CAPACITY(oldCapacity);
-        array->values =
-            GROW_ARRAY(Value, array->values, oldCapacity, array->capacity);
-    }
-
-    array->values[array->count++] = value;
+    smartArrayAppend(array, &value);
 }
 
-void freeValueArray(ValueArray *array) {
-    FREE_ARRAY(Value, array->values, array->capacity);
-    initValueArray(array);
+Value getValueArrayAt(ValueArray const *array, size_t index) {
+    return SMART_ARRAY_AT(array, index, Value);
 }
+
+void setValueArrayAt(ValueArray *array, size_t index, Value value) {
+    SMART_ARRAY_AT(array, index, Value) = value;
+}
+
+size_t getValueArrayCount(ValueArray const *array) {
+    return getSmartArrayCount(array);
+}
+
+void freeValueArray(ValueArray *array) { freeSmartArray(array); }
 
 void printValueArray(ValueArray *array) {
-    for (int i = 0; i < array->count; i++) {
-        printValue(array->values[i]);
+    for (size_t i = 0; i < getValueArrayCount(array); i++) {
+        printValue(getValueArrayAt(array, i));
 
         // Don't print a space on the final iteration.
-        if (i != array->count - 1) {
+        if (i != getValueArrayCount(array) - 1) {
             putchar(' ');
         }
     }

@@ -67,3 +67,5 @@ Value parseNExprsIntoList(ParseDatumFn parse, int n);
 // n is unsigned because 'parse list of at least -1' makes no sense.
 Value parseAtLeastNExprsUsing(ParseDatumFn parse, size_t n);
 Value parseListOfExpressions(void);
+
+ExprPointerArray parseUntilRightParen();

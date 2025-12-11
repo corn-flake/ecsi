@@ -30,7 +30,7 @@
   Prints name with a new line after it and returns the index of the next
   instruction. Used for instructions that take no operands.
  */
-static int simpleInstruction(char const *name, int offset);
+static size_t simpleInstruction(char const *name, size_t offset);
 
 /*
   Prints name left-aligned in a 16 character field, and operand right-aligned
@@ -45,33 +45,34 @@ static void printValueInQuotesAtEndOfLine(Value value);
   Prints the 2-byte instruction at offset in chunk, labeling it as name, and
   return the offset of the next instruction.
  */
-static int byteInstruction(char const *name, Chunk const *chunk, int offset);
+static size_t byteInstruction(char const *name, Chunk const *chunk,
+                              size_t offset);
 
 /*
   Prints a jump instruction, where it jumps to, and returns the offset of the
   next instruction.
  */
-static int jumpInstruction(char const *name, int sign, Chunk const *chunk,
-                           int offset);
+static size_t jumpInstruction(char const *name, int sign, Chunk const *chunk,
+                              size_t offset);
 
 /*
   Prints an instruction that refers to a constant with an 1 byte operand, and
   return the offset of the next operand.
  */
-static int constantInstruction(char const *name, Chunk const *chunk,
-                               int offset);
+static size_t constantInstruction(char const *name, Chunk const *chunk,
+                                  size_t offset);
 
 /*
   Prints an instruction with op code OP_CONSTANT_LONG, and returns
   the offset of the next instruction.
  */
-static int constantLongInstruction(char const *name, Chunk const *chunk,
-                                   int offset);
+static size_t constantLongInstruction(char const *name, Chunk const *chunk,
+                                      size_t offset);
 
 void disassembleChunk(Chunk *const chunk, char const *name) {
     printf("== %s ==\n", name);
 
-    for (int offset = 0; offset < chunk->count;) {
+    for (size_t offset = 0; offset < getChunkCount(chunk);) {
         offset = disassembleInstruction(chunk, offset);
     }
 }
@@ -81,7 +82,7 @@ int disassembleInstruction(Chunk *const chunk, int offset) {
 
     printf("%4d ", getLine(chunk, offset));
 
-    uint8_t instruction = chunk->code[offset];
+    uint8_t instruction = getChunkAt(chunk, offset);
     switch (instruction) {
         case OP_RETURN:
             return simpleInstruction("OP_RETURN", offset);
@@ -121,16 +122,16 @@ int disassembleInstruction(Chunk *const chunk, int offset) {
             return byteInstruction("OP_CALL", chunk, offset);
         case OP_CLOSURE: {
             offset++;
-            uint8_t constant = chunk->code[offset++];
+            uint8_t constant = getChunkAt(chunk, offset++);
             printInstructionNameAndOperand("OP_CLOSURE", constant);
-            printValue(chunk->constants.values[constant]);
+            printValue(getValueArrayAt(&(chunk->constants), constant));
             puts("");
 
             ObjFunction *function =
-                AS_FUNCTION(chunk->constants.values[constant]);
+                AS_FUNCTION(getValueArrayAt(&(chunk->constants), constant));
             for (int j = 0; j < function->upvalueCount; j++) {
-                int isLocal = chunk->code[offset++];
-                int index = chunk->code[offset++];
+                int isLocal = getChunkAt(chunk, offset++);
+                int index = getChunkAt(chunk, offset++);
                 printf("%04d      |                     %s %d\n", offset - 2,
                        isLocal ? "local" : "upvalue", index);
             }
@@ -144,32 +145,34 @@ int disassembleInstruction(Chunk *const chunk, int offset) {
     }
 }
 
-static int byteInstruction(const char *name, Chunk const *chunk, int offset) {
-    uint8_t slot = chunk->code[offset + 1];
+static size_t byteInstruction(const char *name, Chunk const *chunk,
+                              size_t offset) {
+    uint8_t slot = getChunkAt(chunk, offset + 1);
     printInstructionNameAndOperand(name, slot);
     puts("");
     return offset + 2;
 }
 
-static int jumpInstruction(const char *name, int sign, Chunk const *chunk,
-                           int offset) {
-    uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
-    jump |= chunk->code[offset + 2];
+static size_t jumpInstruction(const char *name, int sign, Chunk const *chunk,
+                              size_t offset) {
+    uint16_t jump = (uint16_t)(getChunkAt(chunk, offset + 1) << 8);
+    jump |= getChunkAt(chunk, offset + 2);
     printInstructionNameAndOperand(name, offset);
-    printf("-> %d\n", offset + 3 + sign * jump);
+    printf("-> %zu\n", offset + 3 + sign * jump);
     return offset + 3;
 }
 
-static int constantInstruction(const char *name, Chunk const *chunk,
-                               int offset) {
-    uint8_t constant = chunk->code[offset + 1];
+static size_t constantInstruction(const char *name, Chunk const *chunk,
+                                  size_t offset) {
+    uint8_t constant = getChunkAt(chunk, offset + 1);
     printInstructionNameAndOperand(name, constant);
-    printValueInQuotesAtEndOfLine(chunk->constants.values[constant]);
+    printValueInQuotesAtEndOfLine(
+        getValueArrayAt(&(chunk->constants), constant));
     return offset + 2;
 }
 
-static int constantLongInstruction(char const *name, Chunk const *chunk,
-                                   int offset) {
+static size_t constantLongInstruction(char const *name, Chunk const *chunk,
+                                      size_t offset) {
     /*
       This shifting and or-ing is preferred to using memcpy or casting the
       chunk->code to a 4-byte type and dereferencing because those methods give
@@ -179,13 +182,14 @@ static int constantLongInstruction(char const *name, Chunk const *chunk,
       parses its operand.
     */
 
-    uint32_t constantIndex = (uint32_t)(chunk->code[offset + 1] << 8);
-    constantIndex |= chunk->code[offset + 2];
+    uint32_t constantIndex = (uint32_t)(getChunkAt(chunk, offset + 1) << 8);
+    constantIndex |= getChunkAt(chunk, offset + 2);
     constantIndex <<= 8;
-    constantIndex |= chunk->code[offset + 3];
+    constantIndex |= getChunkAt(chunk, offset + 3);
 
     printInstructionNameAndOperand(name, constantIndex);
-    printValueInQuotesAtEndOfLine(chunk->constants.values[constantIndex]);
+    printValueInQuotesAtEndOfLine(
+        getValueArrayAt(&(chunk->constants), constantIndex));
     return offset + 4;
 }
 
@@ -199,7 +203,7 @@ static void printInstructionNameAndOperand(char const *name, uint32_t operand) {
     printf("%-16s %4u ", name, operand);
 }
 
-static int simpleInstruction(const char *name, int offset) {
+static size_t simpleInstruction(char const *name, size_t offset) {
     puts(name);
     return offset + 1;
 }

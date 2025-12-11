@@ -90,7 +90,7 @@ static void runtimeError(char const *format, ...) {
     for (int i = vm.frameCount - 1; i >= 0; i--) {
         CallFrame *frame = &vm.frames[i];
         ObjFunction *function = frame->closure->function;
-        size_t instruction = frame->ip - function->chunk.code - 1;
+        size_t instruction = frame->ip - getChunkCode(&(function->chunk)) - 1;
         fprintf(stderr, "[line %d] in ",
                 getLine(&frame->closure->function->chunk, instruction));
         if (NULL == function->name) {
@@ -175,7 +175,7 @@ static InterpretResult run(void) {
     (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 
 #define READ_CONSTANT() \
-    (frame->closure->function->chunk.constants.values[READ_BYTE()])
+    (getValueArrayAt(&(frame->closure->function->chunk.constants), READ_BYTE()))
 
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op)                          \
@@ -196,7 +196,8 @@ static InterpretResult run(void) {
         printf("\n");
         disassembleInstruction(
             &(frame->closure->function->chunk),
-            (int)(frame->ip - frame->closure->function->chunk.code));
+            (int)(frame->ip -
+                  getChunkCode(&(frame->closure->function->chunk))));
 #endif
         uint8_t instruction;
         switch (instruction = READ_BYTE()) {
@@ -209,8 +210,9 @@ static InterpretResult run(void) {
                 uint32_t constantIndex = READ_SHORT();
                 constantIndex <<= 8;
                 constantIndex |= READ_BYTE();
-                Value constantValue = frame->closure->function->chunk.constants
-                                          .values[constantIndex];
+                Value constantValue = getValueArrayAt(
+                    &(frame->closure->function->chunk.constants),
+                    constantIndex);
                 push(constantValue);
                 break;
             }
@@ -405,7 +407,7 @@ static bool call(ObjClosure *closure, int argCount) {
 
     CallFrame *frame = &vm.frames[vm.frameCount++];
     frame->closure = closure;
-    frame->ip = closure->function->chunk.code;
+    frame->ip = getChunkCode(&(closure->function->chunk));
     frame->slots = vm.stackTop - argCount - 1;
     return true;
 }

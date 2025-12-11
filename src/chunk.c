@@ -25,50 +25,57 @@
 
 #include "line_number.h"
 #include "memory.h"
+#include "smart_array.h"
 #include "value.h"
 #include "vm.h"
 
 void initChunk(Chunk *chunk) {
-    chunk->count = 0;
-    chunk->capacity = 0;
-    chunk->code = NULL;
+    initSmartArray(&(chunk->code), reallocate, sizeof(uint8_t));
     initValueArray(&chunk->constants);
     initLineNumberArray(&chunk->lines);
 }
 
 void writeChunk(Chunk *chunk, uint8_t byte, unsigned int line) {
-    if (chunk->capacity < chunk->count + 1) {
-        int oldCapacity = chunk->capacity;
-        chunk->capacity = GROW_CAPACITY(oldCapacity);
-        chunk->code =
-            GROW_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
-    }
-
-    chunk->code[chunk->count] = byte;
+    smartArrayAppend(&(chunk->code), &byte);
     unsigned int writtenLine = writeNumber(&chunk->lines, line);
     assert(line == writtenLine);
-    chunk->count++;
+}
+
+uint8_t getChunkAt(Chunk const *chunk, size_t index) {
+    return ((uint8_t *)chunk->code.data)[index];
+}
+
+void setChunkAt(Chunk *chunk, size_t index, uint8_t byte) {
+    ((uint8_t *)chunk->code.data)[index] = byte;
+}
+
+uint8_t *getChunkCode(Chunk const *chunk) {
+    return (uint8_t *)chunk->code.data;
+}
+
+size_t getChunkCount(Chunk const *chunk) {
+    return getSmartArrayCount(&(chunk->code));
 }
 
 void freeChunk(Chunk *chunk) {
-    FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
-    freeLineNumberArray(&chunk->lines);
-    freeValueArray(&chunk->constants);
+    freeSmartArray(&(chunk->code));
+    freeLineNumberArray(&(chunk->lines));
+    freeValueArray(&(chunk->constants));
     initChunk(chunk);
 }
 
 int addConstant(Chunk *chunk, Value value) {
     push(value);
-    writeValueArray(&chunk->constants, value);
+    writeValueArray(&(chunk->constants), value);
     pop();
-    return chunk->constants.count - 1;
+    return getValueArrayCount(&(chunk->constants) - 1);
 }
 
 int getLine(Chunk *chunk, int offset) {
     // TODO: Change offset to a size_t
     assert(offset >= 0);
 
-    size_t entriesCount = numberOfEntries(&chunk->lines);
+    size_t entriesCount = numberOfEntries(&(chunk->lines));
     /*
       No entries indicates no data in the chunk, and that's a
       chunk state that getLine shouldn't be called in, so we return
@@ -79,13 +86,8 @@ int getLine(Chunk *chunk, int offset) {
     size_t counter = 0;
     size_t entryIndex = 0;
 
-    // We create a variable to store this to prevent
-    // re-typing chunk->lines.lineNumbers.
-    LineNumber *entries = chunk->lines.lineNumbers;
-    LineNumber currentEntry = entries[0];
-
-    for (; entryIndex < entriesCount; entryIndex++) {
-        currentEntry = entries[entryIndex];
+    for (LineNumber currentEntry; entryIndex < entriesCount; entryIndex++) {
+        currentEntry = getLineNumberArrayAt(&(chunk->lines), entryIndex);
 
         if (counter + currentEntry.repeats >= (size_t)offset) {
             return currentEntry.lineNumber;
@@ -94,7 +96,7 @@ int getLine(Chunk *chunk, int offset) {
         }
     }
 
-    return entries[entryIndex].lineNumber;
+    return getLineNumberArrayAt(&(chunk->lines), entryIndex).lineNumber;
 }
 
 void writeConstant(Chunk *chunk, Value value, int line) {

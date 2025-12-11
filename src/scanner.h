@@ -108,26 +108,6 @@ ObjString *tokenToObjString(Token const *token);
 // Return an ObjSymbol representation of token's text.
 ObjSymbol *tokenToObjSymbol(Token const *token);
 
-// An array of tokens.
-typedef struct {
-    size_t count;     // Number of used elements
-    size_t capacity;  // Number of available elements
-    Token *array;     // Array of tokens
-} TokenArray;
-
-// Initialize the TokenArray at tokenArray.
-void initTokenArray(TokenArray *tokenArray);
-
-// Append token to tokenArray.
-void addToken(TokenArray *tokenArray, Token token);
-
-/*
-  Free memory associated with tokenArray. Does not
-  free the memory at tokenArray, so it's safe to use on
-  stack-allocated memory.
-*/
-void freeTokenArray(TokenArray *tokenArray);
-
 // The state of the scanner
 typedef struct {
     char const *start;    // Pointer into the source code to the start of the
@@ -145,6 +125,3 @@ void initScanner(char const *source);
 
 // Scan and return one token.
 Token scanToken(void);
-
-// Scan as many tokens as possible and append them to tokenArray.
-void scanAllTokensInto(TokenArray *tokenArray);

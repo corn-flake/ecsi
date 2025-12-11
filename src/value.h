@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "common.h"
+#include "smart_array.h"
 
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
@@ -125,11 +126,14 @@ static inline bool isExactInteger(Value value) {
 
 #define IS_EXACT_INTEGER(value) isExactInteger(value)
 
+/*
 typedef struct {
-    int capacity;
-    int count;
+    int count, capacity;
     Value *values;
 } ValueArray;
+*/
+
+typedef SmartArray ValueArray;
 
 // Test if two values are equal.
 bool valuesEqual(Value a, Value b);
@@ -148,6 +152,15 @@ void initValueArray(ValueArray *array);
 
 // Append value to the ValueArray at array.
 void writeValueArray(ValueArray *array, Value value);
+
+// Get the element at index index in a ValueArray
+Value getValueArrayAt(ValueArray const *array, size_t index);
+
+// Set the element at index in array to value.
+void setValueArrayAt(ValueArray *array, size_t index, Value value);
+
+// Get the number of elements in array.
+size_t getValueArrayCount(ValueArray const *array);
 
 // Free memory associated with the ValueArray at array.
 void freeValueArray(ValueArray *array);

@@ -20,20 +20,20 @@
 
 #include <stddef.h>
 
+#include "smart_array.h"
+
 // An run-length encoded line number.
 typedef struct {
     unsigned int lineNumber;  // The line number
     unsigned int repeats;     // The number of times the number repeats.
 } LineNumber;
 
-typedef struct {
-    size_t count;     // The number of used elements in lineNumbers.
-    size_t capacity;  // The number of available elements in lineNumbers.
-    LineNumber *lineNumbers;  // An array of lineNumbers.
-} LineNumberArray;
+typedef SmartArray LineNumberArray;
 
 // Initialize the LineNumberArray pointed to by array.
 void initLineNumberArray(LineNumberArray *array);
+
+LineNumber getLineNumberArrayAt(LineNumberArray const *array, size_t i);
 
 /*
   Free data associated with array, and re-initialize it.
@@ -50,4 +50,4 @@ unsigned int writeNumber(LineNumberArray *array, unsigned int lineNumber);
 /*
   Return the number of entries in array.
  */
-size_t numberOfEntries(LineNumberArray *array);
+size_t numberOfEntries(LineNumberArray const *array);

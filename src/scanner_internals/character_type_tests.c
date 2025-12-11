@@ -22,10 +22,6 @@
 
 #include "../common.h"
 
-#ifndef ALLOW_UPPERCASE_HEX
-bool isHexDigit(char c) { return isdigit(c) || ('a' >= c && 'f' <= c); }
-#endif
-
 bool isSpecialInitial(char c) {
     return '$' == c || '%' == c || '&' == c || '*' == c || '/' == c ||
            ':' == c || '<' == c || '=' == c || '>' == c || '?' == c ||

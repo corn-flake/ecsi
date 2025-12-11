@@ -25,6 +25,7 @@
 #include "compiler.h"
 #include "object.h"
 #include "parser.h"
+#include "smart_array.h"
 #include "table.h"
 #include "value.h"
 #include "vm.h"
@@ -67,42 +68,6 @@ void *checkedRealloc(void *ptr, size_t newSize) {
         DIE("Failed to grow memory at %p to %zu bytes.", ptr, newSize);
     }
     return result;
-}
-
-void *smartArrayCheckedRealloc(void *ptr, size_t _oldSize, size_t newSize) {
-    return checkedRealloc(ptr, newSize);
-}
-
-void initSmartArray(SmartArray *restrict smartArray, ReallocateFn reallocater,
-                    size_t elementSize) {
-    if (NULL == smartArray) return;
-    smartArray->count = smartArray->capacity = 0;
-    smartArray->elementSize = elementSize;
-    smartArray->reallocater = reallocater;
-    smartArray->data = NULL;
-}
-
-void smartArrayAppend(SmartArray *restrict smartArray,
-                      void const *restrict element) {
-    if (smartArray->capacity < smartArray->count + 1) {
-        size_t oldCapacity = smartArray->capacity;
-        smartArray->capacity = GROW_CAPACITY(oldCapacity);
-        smartArray->data = smartArray->reallocater(
-            smartArray->data, oldCapacity * smartArray->elementSize,
-            smartArray->capacity * smartArray->elementSize);
-    }
-    memcpy((char *)smartArray->data +
-               (smartArray->count * smartArray->elementSize),
-           element, smartArray->elementSize);
-    smartArray->count++;
-}
-
-size_t getSmartArrayCount(SmartArray const *smartArray) {
-    return smartArray->count;
-}
-
-size_t getSmartArrayCapacity(SmartArray const *smartArray) {
-    return smartArray->capacity;
 }
 
 #define GC_HEAP_GROW_FACTOR 2
@@ -167,8 +132,8 @@ void freeObjects(void) {
 }
 
 static void markArray(ValueArray *array) {
-    for (int i = 0; i < array->count; i++) {
-        markValue(array->values[i]);
+    for (size_t i = 0; i < getValueArrayCount(array); i++) {
+        markValue(getValueArrayAt(array, i));
     }
 }
 

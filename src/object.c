@@ -274,13 +274,13 @@ static char *objVectorToString(ObjVector const *vector) {
     initGrowableString(&vecString);
     growableStringAppendString(&vecString, "#(");
 
-    char *elem = valueToString(vector->array.values[0]);
+    char *elem = valueToString(getValueArrayAt(&(vector->array), 0));
     growableStringAppendString(&vecString, elem);
     free(elem);
 
-    for (int i = 1; i < vector->array.count; i++) {
+    for (size_t i = 1; i < vector->array.count; i++) {
         growableStringAppendChar(&vecString, ' ');
-        elem = valueToString(vector->array.values[i]);
+        elem = valueToString(getValueArrayAt(&(vector->array), i));
         growableStringAppendString(&vecString, elem);
         free(elem);
     }

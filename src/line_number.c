@@ -22,46 +22,47 @@
 #include <stdlib.h>
 
 #include "memory.h"
+#include "smart_array.h"
+
+static inline void increaseRepeatsOfEntryAt(LineNumberArray *array, size_t i);
 
 void initLineNumberArray(LineNumberArray *array) {
-    array->count = 0;
-    array->capacity = 0;
-    array->lineNumbers = NULL;
+    initSmartArray(array, reallocate, sizeof(LineNumber));
+}
+
+LineNumber getLineNumberArrayAt(LineNumberArray const *array, size_t i) {
+    return SMART_ARRAY_AT(array, i, LineNumber);
 }
 
 unsigned int writeNumber(LineNumberArray *array, unsigned int lineNumber) {
-    if (array->count > 0 &&
-        lineNumber == array->lineNumbers[array->count - 1].lineNumber) {
-        array->lineNumbers[array->count - 1].repeats++;
-        return array->lineNumbers[array->count - 1].lineNumber;
-    }
-
-    if (array->capacity <= array->count) {
-        size_t oldCapacity = array->capacity;
-        array->capacity = GROW_CAPACITY(oldCapacity);
-        array->lineNumbers = GROW_ARRAY(LineNumber, array->lineNumbers,
-                                        oldCapacity, array->capacity);
+    if (getSmartArrayCount(array) > 0 &&
+        getLineNumberArrayAt(array, getSmartArrayCount(array) - 1).lineNumber ==
+            lineNumber) {
+        increaseRepeatsOfEntryAt(array, getSmartArrayCount(array) - 1);
+        return getLineNumberArrayAt(array, getSmartArrayCount(array) - 1)
+            .repeats;
     }
 
     LineNumber encodedNumber = {
         .lineNumber = lineNumber,
         .repeats = 1,
     };
-    array->lineNumbers[array->count] = encodedNumber;
-    array->count++;
 
-    return array->lineNumbers[array->count - 1].lineNumber;
+    smartArrayAppend(array, &encodedNumber);
+    return getLineNumberArrayAt(array, getSmartArrayCount(array) - 1)
+        .lineNumber;
 }
 
-size_t numberOfEntries(LineNumberArray *array) {
-    int numberOfEntries = 0;
-    for (size_t i = 0; i < array->count; i++) {
-        numberOfEntries += array->lineNumbers[i].repeats;
+static inline void increaseRepeatsOfEntryAt(LineNumberArray *array, size_t i) {
+    SMART_ARRAY_AT(array, i, LineNumber).repeats++;
+}
+
+size_t numberOfEntries(LineNumberArray const *array) {
+    size_t numberOfEntries = 0;
+    for (size_t i = 0; i < getSmartArrayCount(array); i++) {
+        numberOfEntries += getLineNumberArrayAt(array, i).repeats;
     }
     return numberOfEntries;
 }
 
-void freeLineNumberArray(LineNumberArray *array) {
-    FREE_ARRAY(LineNumber, array->lineNumbers, array->capacity);
-    initLineNumberArray(array);
-}
+void freeLineNumberArray(LineNumberArray *array) { freeSmartArray(array); }

@@ -64,9 +64,7 @@ typedef enum OpCode {
 
 // A "chunk" of opcodes.
 typedef struct {
-    int count;              // Number of used bytes in code.
-    int capacity;           // Number of available bytes in code.
-    uint8_t *code;          // Array of instructions.
+    SmartArray code;
     LineNumberArray lines;  // Lines at which instructions originated from.
     ValueArray constants;   // The array that instructions that use constants
                             // index into.
@@ -78,6 +76,13 @@ void initChunk(Chunk *chunk);
 // Adds byte to chunk's code, and records that byte originated from line of the
 // source code.
 void writeChunk(Chunk *chunk, uint8_t byte, unsigned int line);
+
+uint8_t getChunkAt(Chunk const *chunk, size_t index);
+void setChunkAt(Chunk *chunk, size_t index, uint8_t byte);
+
+uint8_t *getChunkCode(Chunk const *chunk);
+
+size_t getChunkCount(Chunk const *chunk);
 
 /*
   Frees the memory associated with the chunk at chunk. Does not free the data
