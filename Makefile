@@ -58,7 +58,7 @@ BUILD_RESULTS_PATH = build/results/
 # Subdirectories in build/objs/
 OBJ_SUBDIRS = $(addprefix $(OBJS_PATH)/, parser_internals/ scanner_internals/)
 
-_OBJS_NO_MAIN = chunk.o compiler.o debug.o line_number.o memory.o object.o parser.o scanner.o table.o value.o vm.o parser_internals/derived_expressions.o parser_internals/literals.o parser_internals/parser_operations.o parser_internals/token_to_type.o scanner_internals/character_type_tests.o scanner_internals/hexadecimal.o scanner_internals/identifier.o scanner_internals/intertoken_space.o scanner_internals/pound_something.o scanner_internals/scan_booleans.o scanner_internals/scanner_operations.o
+_OBJS_NO_MAIN = smart_array.o chunk.o compiler.o debug.o line_number.o memory.o object.o parser.o scanner.o table.o value.o vm.o parser_internals/derived_expressions.o parser_internals/literals.o parser_internals/parser_operations.o parser_internals/token_to_type.o scanner_internals/character_type_tests.o scanner_internals/hexadecimal.o scanner_internals/identifier.o scanner_internals/intertoken_space.o scanner_internals/pound_something.o scanner_internals/scan_booleans.o scanner_internals/scanner_operations.o
 
 _OBJS =  $(_OBJS_NO_MAIN) main.o
 
@@ -142,13 +142,13 @@ compile: $(OBJS)
 install: $(OBJS)
 	$(LINK) -o $(EXECUTABLE_NAME).$(TARGET_EXTENSION) $(OBJS)
 
-chunk.o: chunk.c line_number.c memory.c value.c vm.c
+chunk.o: chunk.c line_number.c memory.c value.c vm.c smart_array.c
 
 compiler.o: compiler.c chunk.c common.c memory.c object.c parser.c 
 
-debug.o: debug.c chunk.c object.c value.c
+debug.o: debug.c chunk.c object.c value.c smart_array.c
 
-line_number.o: line_number.c memory.c
+line_number.o: line_number.c memory.c smart_array.c
 
 main.o: main.c chunk.c debug.c vm.c 
 
@@ -156,15 +156,15 @@ memory.o: memory.c compiler.c object.c parser.c table.c value.c vm.c common.h
 
 object.o: object.c memory.c table.c value.c vm.c 
 
-parser.o: parser.c memory.c object.c parser_internals/derived_expressions.c parser_internals/literals.c parser_internals/parser_operations.c scanner.c value.c vm.c
+parser.o: parser.c memory.c object.c parser_internals/derived_expressions.c parser_internals/literals.c parser_internals/parser_operations.c scanner.c value.c vm.c smart_array.c
 
 scanner.o: scanner.c memory.c object.c scanner_internals/character_type_tests.c scanner_internals/identifier.c scanner_internals/intertoken_space.c scanner_internals/pound_something.c scanner_internals/scanner_operations.c 
 
 table.o: table.c memory.c object.c value.c
 
-value.o: value.c memory.c object.c
+value.o: value.c memory.c object.c smart_array.c
 
-vm.o: vm.c chunk.c compiler.c debug.c memory.c object.c table.c value.c 
+vm.o: vm.c chunk.c compiler.c debug.c memory.c object.c table.c value.c smart_array.c
 
 parser_internals/derived_expressions.o: parser_internals/derived_expressions.c object.c parser.c vm.c
 
@@ -186,7 +186,9 @@ scanner_internals/pound_something.o: scanner_internals/pound_something.c scanner
 
 scanner_internals/scan_booleans.o: scanner_internals/scan_booleans.c scanner.c scanner_internals/scanner_operations.c 
 
-scanner_internals/scanner_operations.o: scanner_internals/scanner_operations.c 
+scanner_internals/scanner_operations.o: scanner_internals/scanner_operations.c
+
+smart_array.o: memory.c smart_array.c
 
 format:
 	clang-format -i $(SOURCE_PATH)*.c $(SOURCE_PATH)*.h $(TEST_PATH)*.c

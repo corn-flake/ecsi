@@ -27,7 +27,7 @@ static Value parseBytevectorElement(void);
 
 static ExprLiteral *makeNonQuotedLiteral(Value value);
 
-Value parseVectorUsing(ParseFn parse) {
+Value parseVectorUsing(ParseDatumFn parse) {
     ObjVector *vector = newVector();
     if (parserMatch(TOKEN_RIGHT_PAREN)) {
         return OBJ_VAL(vector);
@@ -135,7 +135,7 @@ ExprLiteral *parseVector(void) {
 
 ExprLiteral *makeLiteral(bool isQuoted, Value value) {
     ExprLiteral *literal =
-        ALLOCATE_EXPR(ExprLiteral, EXPR_LITERAL, currentLocation());
+        ALLOCATE_EXPR(ExprLiteral, EXPR_LITERAL, CURRENT_LOCATION());
     literal->isQuotation = isQuoted;
     literal->value = value;
     return literal;

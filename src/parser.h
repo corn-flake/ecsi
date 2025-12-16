@@ -38,6 +38,10 @@ typedef enum {
     EXPR_UNLESS,
     EXPR_BEGIN,
 
+    // Helpers
+    EXPR_BODY,
+    EXPR_SEQUENCE,
+
     // Unimplemented
     EXPR_LET,
     EXPR_COND,
@@ -56,46 +60,92 @@ typedef enum {
     EXPR_CASE_LAMBDA,
 } ExprType;
 
+/*
+  The base type for all AST nodes, including those not
+  considered expressions by the standard, like definitions and
+  helper types created for convienience.
+*/
 typedef struct {
     ExprType type;
     SourceLocation location;
 } Expr;
 
+// A dynamic array of Expr pointers.
 typedef SmartArray ExprPointerArray;
 
+// A sequence, which is a list of at least one expression.
 typedef struct {
     Expr expr;
     ExprPointerArray expressions;
 } ExprSequence;
 
-typedef ExprSequence ExprBegin;
+typedef ExprSequence ExprBegin;  // Begins are the same as sequences.
 
+// A body, zero or more definitions, then a sequence.
 typedef struct {
     Expr expr;
     ExprPointerArray definitions;
     ExprSequence *sequence;
 } ExprBody;
 
+/*
+  An identifier. Note that the expr field contains all necessary
+  information in its location field.
+*/
 typedef struct {
     Expr expr;
 } ExprIdentifier;
 
+/*
+  A literal expression. If isQuotation is true, then
+  the expression in quoted.
+*/
 typedef struct {
     Expr expr;
     Value value;
     bool isQuotation;
 } ExprLiteral;
 
+// A function call.
 typedef struct {
     Expr expr;
     Expr *operator;
     ExprPointerArray operands;
 } ExprCall;
 
+typedef enum {
+    /*
+      The argument list is only one identifier, ex.
+      (define (const x) (lambda args x))
+    */
+    ARG_LIST_ONE_IDENTIFIER,
+
+    // A normal argument list, ex. (define (add x y) (+ x y))
+    ARG_LIST_NORMAL,
+
+    /*
+      A variadic argument list with some arguments, then a dot, then another.
+      ex. (define (add-first-to-rest-args x . args)
+           (map (lambda (arg) (+ x arg)) args))
+    */
+    ARG_LIST_VARIADIC
+} ArgumentListType;
+
+typedef struct {
+    ArgumentListType type;
+    SmartArray identifiers;
+} ArgumentList;
+
 typedef struct {
     Expr expr;
-    ExprPointerArray formals;
-    ExprPointerArray body;
+    ExprIdentifier *name;
+    Expr *value;
+} ExprDefinition;
+
+typedef struct {
+    Expr expr;
+    ArgumentList formals;
+    ExprBody *body;
 } ExprLambda;
 
 typedef struct {
@@ -158,4 +208,5 @@ void initParser(void);
 Expr *parseExpression(void);
 Value parseDatum(void);
 AST parseAllTokens(void);
-void freeAST(AST ast);
+void printAST(AST const *ast);
+void freeAST(AST *ast);

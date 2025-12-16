@@ -26,8 +26,7 @@
 #include "scanner.h"
 
 ExprLogical *parseLogical(void) {
-    while (!check(TOKEN_RIGHT_PAREN)) {
-    }
+    return NULL;
 }
 
 // static Value parseLet();
@@ -45,6 +44,7 @@ ExprLogical *parseLogical(void) {
 // static Value parseCondClause(bool *foundElse);
 
 ParseDatumFn getDerivedExpressionParseFn(void) {
+    /*
     if (!check(TOKEN_IDENTIFIER)) return NULL;
     if (currentTokenMatchesString("cond")) return parseCond;
     if (currentTokenMatchesString("let")) return parseLet;
@@ -56,6 +56,7 @@ ParseDatumFn getDerivedExpressionParseFn(void) {
     if (currentTokenMatchesString("unless")) return parseUnless;
     if (currentTokenMatchesString("begin")) return parseBegin;
     if (currentTokenMatchesString("lambda")) return parseLambda;
+    */
     return NULL;
 }
 /*
@@ -95,11 +96,7 @@ static Value parseIf() {
 }
 */
 
-ExprLogical *parseLogical(void) {
-    while (!check(TOKEN_RIGHT_PAREN)) {
-    }
-}
-
+/*
 static Value parseLet(void) {
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'let'");
 
@@ -138,17 +135,20 @@ static Value parseBindingSpec() {
 
     return spec;
 }
+*/
 
+/*
 static Value parseCond() {
     bool foundElse = false;
     Value currentClause = parseCondClause(&foundElse);
     Value clauseList = guardedCons(currentClause, NIL_VAL);
+*/
     /*
      We don't return here if foundElse is true because that would lead to an
      error where duplicate else clauses are not detected if the first clause is
      an else clause.
     */
-
+/*
     // We push these to protect them from parseCondClause.
     push(clauseList);
     push(currentClause);
@@ -216,7 +216,9 @@ static Value parseDefine() {
     pop();  // secondPart
     return defineExpression;
 }
+*/
 
+/*
 static Value parseWhen() {
     if (parserMatch(TOKEN_RIGHT_PAREN)) {
         error("Expect expression as test in unless expression.");
@@ -243,6 +245,7 @@ static Value parseWhen() {
     return whenExpr;
 }
 
+
 static Value parseUnless() {
     if (parserMatch(TOKEN_RIGHT_PAREN)) {
         error("Expect expression as test in unless expression.");
@@ -263,7 +266,9 @@ static Value parseBegin() {
     }
     return parseListOfExpressions();
 }
+*/
 
+/*
 static Value parseLambda() {
     Value args = NIL_VAL;
 
@@ -281,7 +286,9 @@ static Value parseLambda() {
     pop();  // args
     return guardedCons(args, body);
 }
+*/
 
+/*
 static Value parseArgList() {
     if (parserMatch(TOKEN_RIGHT_PAREN)) {
         return NIL_VAL;
@@ -319,3 +326,4 @@ static Value parseArgList() {
     consume(TOKEN_RIGHT_PAREN, "Expect ')' to close argument list.");
     return argList;
 }
+*/

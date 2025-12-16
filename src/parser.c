@@ -31,24 +31,50 @@
 #include "parser_internals/parser_operations.h"
 #include "parser_internals/token_to_type.h"
 #include "scanner.h"
+#include "smart_array.h"
 #include "value.h"
 #include "vm.h"
 
 Parser parser;
 
-#define PLACEHOLDER_LOCATION \
-    ((SourceLocation){.start = NULL, .length = 0, .line = CURRENT_LINE()})
-
 static void synchronize(void);
 static Expr *parseListBasedExpression(void);
 static ExprLiteral *parseQuotation(void);
-static void initAST(AST *ast);
+
+static inline void initAST(AST *ast);
 static void appendToAST(AST *ast, Expr *expr);
 
+static void freeExpr(Expr *expr);
+
+// Parses a procedure call.
 static ExprCall *parseCall(void);
+
+// Parses a lambda expression.
 static ExprLambda *parseLambda(void);
+
+// Parses an if expression.
 static ExprIf *parseIf(void);
+
+// Parses a set! expression.
 static ExprSet *parseSet(void);
+
+// Parses an identifier.
+static ExprIdentifier *parseIdentifier(void);
+
+// Parses a body (see r7rs standard, pg. 63)
+static ExprBody *parseBody(void);
+
+// Attempts to parse a definition. If it cannot parse one, it returns NULL.
+static ExprDefinition *tryToParseDefinition(void);
+
+// Initializes an ArgumentList.
+static inline void initArgumentList(ArgumentList *argList);
+
+// Parses as many identifiers as possible into an argument list.
+static void parseArgumentList(ArgumentList *argList);
+
+static inline void initExprPointerArray(ExprPointerArray *array);
+static void appendToExprPointerArray(ExprPointerArray *array, Expr *expr);
 
 void initParser(void) {
     parser.current = scanToken();
@@ -58,16 +84,24 @@ void initParser(void) {
     initAST(&(parser.ast));
 }
 
-static void initAST(AST *ast) {
-    initSmartArray(ast, smartArrayCheckedRealloc, sizeof(Expr *));
-}
+static void initAST(AST *ast) { initExprPointerArray(ast); }
+
+void printAST(AST const *ast) { puts("TODO: printAST"); }
 
 AST parseAllTokens(void) {
     while (!check(TOKEN_EOF)) {
-        appendToAst(parseExpression());
+        appendToAST(&(parser.ast), parseExpression());
     }
     return parser.ast;
 }
+
+void freeAST(AST *ast) {
+    for (size_t i = 0; i < getSmartArrayCount(ast); i++) {
+        freeExpr(SMART_ARRAY_AT(ast, i, Expr *));
+    }
+}
+
+static void freeExpr(Expr *expr) { return; }
 
 Expr *parseExpression(void) {
     switch (CURRENT_TYPE()) {
@@ -118,7 +152,6 @@ Expr *parseExpression(void) {
 }
 
 static Expr *parseListBasedExpression(void) {
-
     switch (CURRENT_TYPE()) {
         case TOKEN_QUOTE:
             parserAdvance();
@@ -148,20 +181,106 @@ static Expr *parseListBasedExpression(void) {
     }
 }
 
+static ExprIf *parseIf(void) {
+    ExprIf *conditional = ALLOCATE_EXPR(ExprIf, EXPR_IF, CURRENT_LOCATION());
+    conditional->test = parseExpression();
+    conditional->consequent = parseExpression();
+
+    conditional->alternate = NULL;
+
+    if (!parserMatch(TOKEN_RIGHT_PAREN)) {
+        conditional->alternate = parseExpression();
+        consume(TOKEN_RIGHT_PAREN, "Expect ')' to close 'if' expression");
+    }
+
+    return conditional;
+}
+
+static ExprSet *parseSet(void) {
+    ExprSet *assignment = ALLOCATE_EXPR(ExprSet, EXPR_SET, CURRENT_LOCATION());
+    assignment->target = parseIdentifier();
+    assignment->expression = parseExpression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' to close 'set!' expression");
+    return assignment;
+}
+
+static ExprLambda *parseLambda(void) {
+    ExprLambda *lambda =
+        ALLOCATE_EXPR(ExprLambda, EXPR_LAMBDA, CURRENT_LOCATION());
+
+    initArgumentList(&(lambda->formals));
+    parseArgumentList(&(lambda->formals));
+
+    lambda->body = parseBody();
+
+    return lambda;
+}
+
+static void initArgumentList(ArgumentList *argList) {
+    argList->type = ARG_LIST_NORMAL;
+    initSmartArray(&(argList->identifiers), smartArrayCheckedRealloc,
+                   sizeof(ExprIdentifier *));
+}
+
+static void parseArgumentList(ArgumentList *argList) {
+    ExprIdentifier *id = NULL;
+    argList->type = ARG_LIST_NORMAL;
+
+    if (parserMatch(TOKEN_LEFT_PAREN)) {
+        while (!check(TOKEN_RIGHT_PAREN)) {
+            if (parserMatch(TOKEN_PERIOD)) {
+                argList->type = ARG_LIST_VARIADIC;
+            }
+            id = parseIdentifier();
+            smartArrayAppend(&(argList->identifiers), &id);
+        }
+    } else {
+        argList->type = ARG_LIST_ONE_IDENTIFIER;
+        id = parseIdentifier();
+        smartArrayAppend(&(argList->identifiers), &id);
+    }
+}
+
+static ExprBody *parseBody(void) {
+    ExprBody *body = ALLOCATE_EXPR(ExprBody, EXPR_BODY, CURRENT_LOCATION());
+
+    initExprPointerArray(&(body->definitions));
+
+    for (ExprDefinition *definition = tryToParseDefinition();
+         NULL != definition; definition = tryToParseDefinition()) {
+        appendToExprPointerArray(&(body->definitions), (Expr *)definition);
+    }
+
+    body->sequence = parseExpressionsUntilRightParen();
+}
+
+static inline void initExprPointerArray(ExprPointerArray *array) {
+    initSmartArray(array, smartArrayCheckedRealloc, sizeof(Expr *));
+}
+
+static void appendToExprPointerArray(ExprPointerArray *array, Expr *expr) {
+    smartArrayAppend(array, &expr);
+}
+
+static ExprIdentifier *parseIdentifier(void) {
+    if (!check(TOKEN_IDENTIFIER)) {
+        errorAtCurrent("Expect identifier");
+    }
+    return ALLOCATE_EXPR(ExprIdentifier, EXPR_IDENTIFIER, CURRENT_LOCATION());
+}
+
 static ExprCall *parseCall(void) {
     ExprCall *call = ALLOCATE_EXPR(ExprCall, EXPR_CALL, CURRENT_LOCATION());
-    call->operator = parseExpression();
+    call->operator= parseExpression();
     call->operands = parseUntilRightParen();
-    return (Expr *)call;
+    return call;
 }
 
 static ExprLiteral *parseQuotation(void) {
     return makeLiteral(true, parseDatum());
 }
 
-static void appendToAst(AST *ast, Expr *expr) {
-    smartArrayAppend(ast, &expr);
-}
+static void appendToAST(AST *ast, Expr *expr) { smartArrayAppend(ast, &expr); }
 
 static void synchronize(void) {
     parser.panicMode = false;

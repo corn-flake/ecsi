@@ -99,6 +99,8 @@ size_t tokenGetLength(Token const *token);
 char const *tokenGetStart(Token const *token);
 TokenType tokenGetType(Token const *token);
 
+bool textOfTokenEqualToString(Token const *token, char const *string);
+
 // Print a token
 void printToken(Token const *token);
 

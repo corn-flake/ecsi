@@ -68,4 +68,4 @@ Value parseNExprsIntoList(ParseDatumFn parse, int n);
 Value parseAtLeastNExprsUsing(ParseDatumFn parse, size_t n);
 Value parseListOfExpressions(void);
 
-ExprPointerArray parseUntilRightParen();
+void parseExpressionsUntilRightParen(ExprPointerArray *array);

@@ -23,7 +23,7 @@
 
 ExprLiteral *makeLiteral(bool isQuoted, Value value);
 
-Value parseVectorUsing(ParseFn parse);
+Value parseVectorUsing(ParseDatumFn parse);
 ExprLiteral *symbol(void);
 
 ExprLiteral *parseBytevector(void);

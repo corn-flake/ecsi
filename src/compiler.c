@@ -552,7 +552,7 @@ ObjFunction *compile(char const *source) {
     AST ast = parseAllTokens();
 
     if (!parser.hadError) {
-        printAST(ast);
+        printAST(&ast);
         puts("");
     } else {
         puts("Not printing ast, parser had error.");
@@ -574,7 +574,7 @@ ObjFunction *compile(char const *source) {
     ObjFunction *function = endCompiler();
     return parser.hadError ? NULL : function;
     */
-    freeAST(ast);
+    freeAST(&ast);
     return NULL;
 }
 

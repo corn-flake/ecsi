@@ -79,6 +79,10 @@ char const *tokenTypeToString(TokenType type) {
     }
 }
 
+bool textOfTokenEqualToString(Token const *token, char const *string) {
+    return strncmp(tokenGetStart(token), string, tokenGetLength(token));
+}
+
 void printToken(Token const *token) {
     printf("Token { .type = %s, .start = '%.*s', .line = %zu }\n",
            tokenTypeToString(tokenGetType(token)), (int)tokenGetLength(token),

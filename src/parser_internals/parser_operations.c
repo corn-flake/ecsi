@@ -253,4 +253,9 @@ Value parseAtLeastNExprsUsing(ParseDatumFn parse, size_t n) {
     return list;
 }
 
-Value parseListOfExpressions() { return parseListUsing(parseExpression); }
+Value parseListOfExpressions() { return NIL_VAL; }
+
+void parseExpressionsUntilRightParen(ExprPointerArray *array) {
+    while (!check(TOKEN_RIGHT_PAREN)) {
+    }
+} 
