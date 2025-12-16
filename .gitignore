@@ -4,3 +4,4 @@ unity/*
 *.idx
 .cache/*
 .gdbhistory
+*.out
