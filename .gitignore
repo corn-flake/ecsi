@@ -2,6 +2,7 @@ build/*
 unity/*
 *~
 *.idx
+.cache/clangd/*
 .cache/*
 .gdbhistory
 *.out
