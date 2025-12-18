@@ -49,7 +49,11 @@ bool smartArrayPopFromEnd(SmartArray *restrict smartArray, void *restrict out) {
     }
 
     if (NULL != out) {
-        void *lastElement = (char *)smartArray->data - smartArray->elementSize;
+        void *lastElement =
+            ((char *)smartArray->data) +
+            ((getSmartArrayCount(smartArray) - 1) * smartArray->elementSize);
+        // void *lastElement = &(SMART_ARRAY_AT(smartArray,
+        // getSmartArrayCount(smartArray) - 1));
         memcpy(out, lastElement, smartArray->elementSize);
     }
 

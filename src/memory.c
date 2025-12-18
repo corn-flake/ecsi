@@ -63,7 +63,7 @@ void *checkedMalloc(size_t size) {
 
 void *checkedRealloc(void *ptr, size_t newSize) {
     void *result = realloc(ptr, newSize);
-    if (NULL == result) {
+    if (newSize > 0 && NULL == result) {
         DIE("Failed to grow memory at %p to %zu bytes.", ptr, newSize);
     }
     return result;

@@ -73,7 +73,6 @@ void test_writeConstant(void) {
         TEST_ASSERT_EQUAL_UINT8(
             OP_CONSTANT_LONG, getChunkAt(&chunk, opConstantLongStart + 4 * i));
     }
-    disassembleChunk(&chunk, "test_WriteConstant chunk");
 }
 
 #undef LINE

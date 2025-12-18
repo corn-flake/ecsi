@@ -42,15 +42,15 @@ void writeChunk(Chunk *chunk, uint8_t byte, unsigned int line) {
 }
 
 uint8_t getChunkAt(Chunk const *chunk, size_t index) {
-    return ((uint8_t *)chunk->code.data)[index];
+    return SMART_ARRAY_AT(&(chunk->code), index, uint8_t);
 }
 
 void setChunkAt(Chunk *chunk, size_t index, uint8_t byte) {
-    ((uint8_t *)chunk->code.data)[index] = byte;
+    SMART_ARRAY_AT(&(chunk->code), index, uint8_t) = byte;
 }
 
 uint8_t *getChunkCode(Chunk const *chunk) {
-    return (uint8_t *)chunk->code.data;
+    return &(SMART_ARRAY_AT(&(chunk->code), 0, uint8_t));
 }
 
 size_t getChunkCount(Chunk const *chunk) {
