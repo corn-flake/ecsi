@@ -27,15 +27,13 @@
 
 #include "common.h"
 #include "memory.h"
+#include "scanner.h"
+#include "smart_array.h"
 #include "table.h"
 #include "value.h"
 #include "vm.h"
 
-typedef struct {
-    size_t count;
-    size_t capacity;
-    char *string;
-} GrowableString;
+typedef SmartArray GrowableString;
 
 /*
   There is no growableStringFree function because growableStrings
@@ -67,23 +65,11 @@ static void printPair(ObjPair const *pair);
 static bool objStringEqualToString(ObjString const *string, char const *chars);
 
 static void initGrowableString(GrowableString *gs) {
-    gs->capacity = gs->count = 0;
-    gs->string = checkedMalloc(1);
-    *(gs->string) = '\0';
+    initSmartArray(gs, smartArrayCheckedRealloc, sizeof(char));
 }
 
 static void growableStringAppendChar(GrowableString *gs, char c) {
-    if (gs->capacity < gs->count + 1) {
-        size_t oldCapacity = gs->capacity;
-        gs->capacity = GROW_CAPACITY(oldCapacity);
-        char *newString = checkedMalloc(gs->capacity);
-        memcpy(newString, gs->string, gs->count);
-        gs->string = newString;
-    }
-
-    gs->string[gs->count] = c;
-    gs->string[gs->count + 1] = '\0';
-    gs->count++;
+    smartArrayAppend(gs, &c);
 }
 
 static void growableStringAppendString(GrowableString *gs, const char *s) {
@@ -106,6 +92,8 @@ const char *objTypeToString(ObjType type) {
             return "OBJ_UPVALUE";
         case OBJ_SYMBOL:
             return "OBJ_SYMBOL";
+        case OBJ_SYNTAX:
+            return "OBJ_SYNTAX";
         case OBJ_PAIR:
             return "OBJ_PAIR";
         case OBJ_VECTOR:
@@ -163,7 +151,7 @@ static char *objPairToString(ObjPair const *pair) {
     GrowableString gs;
     initGrowableString(&gs);
     objPairToStringInGrowableString(pair, &gs);
-    return gs.string;
+    return &(SMART_ARRAY_AT(&gs, 0, char));
 }
 
 static void objPairToStringInGrowableString(ObjPair const *pair,
@@ -235,7 +223,7 @@ static char *listToString(ObjPair const *list) {
     free(finalCarString);
     growableStringAppendChar(&gs, ')');
 
-    return gs.string;
+    return &(SMART_ARRAY_AT(&gs, 0, char));
 }
 
 static char *objClosureToString(ObjClosure const *closure) {
@@ -286,7 +274,7 @@ static char *objVectorToString(ObjVector const *vector) {
     }
 
     growableStringAppendChar(&vecString, ')');
-    return vecString.string;
+    return &(SMART_ARRAY_AT(&vecString, 0, char));
 }
 
 #define ALLOCATE_OBJ(type, objectType) \
@@ -415,6 +403,13 @@ ObjSymbol *newSymbol(char const *chars, int length) {
     return symbol;
 }
 
+ObjSyntax *newSyntax(Value value, SourceLocation location) {
+    ObjSyntax *syntax = ALLOCATE_OBJ(ObjSyntax, OBJ_SYNTAX);
+    syntax->value = value;
+    syntax->location = location;
+    return syntax;
+}
+
 void printObject(Value value) {
     switch (OBJ_TYPE(value)) {
         case OBJ_CLOSURE:
@@ -426,16 +421,15 @@ void printObject(Value value) {
         case OBJ_STRING:
             printf("\"%s\"", AS_CSTRING(value));
             break;
-        case OBJ_SYMBOL: {
-            ObjString *text = AS_SYMBOL(value)->text;
-            char *chars = text->chars;
-            printf("'%s", chars);
+        case OBJ_SYMBOL:
+            printf("'%s", AS_CSTRING(OBJ_VAL(AS_SYMBOL(value)->text)));
             break;
-        }
-        case OBJ_PAIR: {
+        case OBJ_SYNTAX:
+            printValue(AS_SYNTAX(value)->value);
+            break;
+        case OBJ_PAIR:
             printPair(AS_PAIR(value));
             break;
-        }
         case OBJ_NATIVE:
             printf("<native fn>");
             break;

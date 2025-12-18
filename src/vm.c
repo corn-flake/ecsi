@@ -33,6 +33,7 @@
 #include "debug.h"
 #include "memory.h"
 #include "object.h"
+#include "smart_array.h"
 #include "table.h"
 #include "value.h"
 
@@ -55,8 +56,9 @@ void initVM(void) {
     vm.stackCapacity = 0;
     vm.objects = NULL;
 
-    vm.grayCount = vm.grayCapacity = 0;
-    vm.grayStack = NULL;
+    initSmartArray(&(vm.gcState.grayStack), smartArrayCheckedRealloc,
+                   sizeof(Obj *));
+    vm.gcState.isOn = true;
 
     initTable(&vm.globals);
     initTable(&vm.strings);

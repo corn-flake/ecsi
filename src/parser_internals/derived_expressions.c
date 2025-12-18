@@ -18,16 +18,7 @@
 
 #include "derived_expressions.h"
 
-#include "../object.h"
-#include "../parser.h"
-#include "../vm.h"
-#include "literals.h"
 #include "parser_operations.h"
-#include "scanner.h"
-
-ExprLogical *parseLogical(void) {
-    return NULL;
-}
 
 // static Value parseLet();
 // static Value parseBindingSpec();
@@ -143,11 +134,11 @@ static Value parseCond() {
     Value currentClause = parseCondClause(&foundElse);
     Value clauseList = guardedCons(currentClause, NIL_VAL);
 */
-    /*
-     We don't return here if foundElse is true because that would lead to an
-     error where duplicate else clauses are not detected if the first clause is
-     an else clause.
-    */
+/*
+ We don't return here if foundElse is true because that would lead to an
+ error where duplicate else clauses are not detected if the first clause is
+ an else clause.
+*/
 /*
     // We push these to protect them from parseCondClause.
     push(clauseList);

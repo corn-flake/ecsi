@@ -39,6 +39,24 @@ size_t getSmartArrayCapacity(SmartArray const *smartArray) {
     return smartArray->capacity;
 }
 
+bool smartArrayIsEmpty(SmartArray const *smartArray) {
+    return 0 == getSmartArrayCapacity(smartArray);
+}
+
+bool smartArrayPopFromEnd(SmartArray *restrict smartArray, void *restrict out) {
+    if (smartArrayIsEmpty(smartArray)) {
+        return false;
+    }
+
+    if (NULL != out) {
+        void *lastElement = (char *)smartArray->data - smartArray->elementSize;
+        memcpy(out, lastElement, smartArray->elementSize);
+    }
+
+    smartArray->capacity--;
+    return true;
+}
+
 void freeSmartArray(SmartArray *smartArray) {
     smartArray->reallocater(smartArray->data,
                             smartArray->capacity * smartArray->elementSize, 0);

@@ -20,6 +20,7 @@
 #pragma once
 
 #include "chunk.h"
+#include "memory.h"
 #include "object.h"
 #include "table.h"
 #include "value.h"
@@ -42,17 +43,13 @@ typedef struct {
     size_t stackCapacity;
 
     Obj *objects;
-    int grayCount;
-    int grayCapacity;
-    Obj **grayStack;
 
     Table globals;
     Table strings;
     ObjString *initString;
     ObjUpvalue *openUpvalues;
 
-    size_t bytesAllocated;
-    size_t nextGC;
+    GarbageCollectorState gcState;
 } VM;
 
 typedef enum {
