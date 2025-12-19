@@ -37,12 +37,12 @@ Parser parser;
 
 static void synchronize(void);
 
-static SyntaxObject *parseList(void);
-static SyntaxObject *parseAbbreviation(void);
+static ObjSyntax *parseList(void);
+static ObjSyntax *parseAbbreviation(void);
 static ObjSymbol *abbreviationSymbol(TokenType abbreviationPrefix);
 
-static inline void initAST(SyntaxObjectArray *ast);
-static void appendToAST(SyntaxObjectArray *ast, SyntaxObject *expr);
+static inline void initAST(ObjSyntaxPointerArray *ast);
+static void appendToAST(ObjSyntaxPointerArray *ast, ObjSyntax *expr);
 
 void initParser(void) {
     parser.current = scanToken();
@@ -53,42 +53,38 @@ void initParser(void) {
     turnOffGarbageCollector();
 }
 
-static void initAST(SyntaxObjectArray *ast) {
-    initSmartArray(ast, smartArrayCheckedRealloc, sizeof(SyntaxObject *));
+static void initAST(ObjSyntaxPointerArray *ast) {
+    initSmartArray(ast, smartArrayCheckedRealloc, sizeof(ObjSyntax *));
 }
 
-void printAST(SyntaxObjectArray const *ast) {
+void printAST(ObjSyntaxPointerArray const *ast) {
     for (size_t i = 0, currentLine = 1; i < getSmartArrayCount(ast); i++) {
-        if (SMART_ARRAY_AT(ast, i, SyntaxObject *)->location.line !=
-            currentLine) {
+        if (SMART_ARRAY_AT(ast, i, ObjSyntax *)->location.line != currentLine) {
             putchar('\n');
-            currentLine = SMART_ARRAY_AT(ast, i, SyntaxObject *)->location.line;
+            currentLine = SMART_ARRAY_AT(ast, i, ObjSyntax *)->location.line;
         }
 
-        printValue(SMART_ARRAY_AT(ast, i, SyntaxObject *)->value);
+        printValue(SMART_ARRAY_AT(ast, i, ObjSyntax *)->value);
     }
 }
 
-SyntaxObjectArray parseAllTokens(void) {
-    while (!check(TOKEN_EOF)) {
+ObjSyntaxPointerArray parseAllTokens(void) {
+    while (!parserIsAtEnd()) {
         appendToAST(&(parser.ast), parseExpression());
     }
 
     return parser.ast;
 }
 
-void freeAST(SyntaxObjectArray *ast) {
+void freeAST(ObjSyntaxPointerArray *ast) {
     freeSmartArray(ast);
     turnOnGarbageCollector();
     collectGarbage();
 }
 
-SyntaxObject *parseExpression(void) {
+ObjSyntax *parseExpression(void) {
     if (tokenIsKeyword(&(parser.current)) || check(TOKEN_IDENTIFIER)) {
-        ObjString *string = tokenToObjString(&(parser.current));
-        SyntaxObject *identifier = makeSyntaxAtCurrent(OBJ_VAL(string));
-        parserAdvance();
-        return identifier;
+        return parseSymbol();
     }
 
     switch (CURRENT_TYPE()) {
@@ -129,7 +125,7 @@ SyntaxObject *parseExpression(void) {
     return NULL;
 }
 
-static SyntaxObject *parseList(void) {
+static ObjSyntax *parseList(void) {
     consume(TOKEN_LEFT_PAREN, "Expect '(' to open list.");
     Token const *listStart = &(parser.previous);
 
@@ -141,9 +137,11 @@ static SyntaxObject *parseList(void) {
         }
     }
 
-    ObjPair *list = newPair(OBJ_VAL(parseExpression()), NIL_VAL);
+    ObjSyntax *expr = parseExpression();
+    ObjPair *list = newPair(OBJ_VAL(expr), NIL_VAL);
     while (canContinueList()) {
-        appendElement(list, OBJ_VAL(parseExpression()));
+        expr = parseExpression();
+        appendElement(list, OBJ_VAL(expr));
     }
 
     consume(TOKEN_RIGHT_PAREN, "Expect right parenthesis to close list.");
@@ -151,10 +149,11 @@ static SyntaxObject *parseList(void) {
     return makeSyntaxFromTokenToCurrent(OBJ_VAL(list), listStart);
 }
 
-static SyntaxObject *parseAbbreviation(void) {
+static ObjSyntax *parseAbbreviation(void) {
     Value abbreviation =
         OBJ_VAL(newPair(OBJ_VAL(abbreviationSymbol(CURRENT_TYPE())), NIL_VAL));
     Token const *abbreviationStart = &(parser.current);
+    parserAdvance();
     Value datum = OBJ_VAL(parseExpression());
     SET_CDR(abbreviation, datum);
     return makeSyntaxFromTokenToCurrent(abbreviation, abbreviationStart);
@@ -175,14 +174,14 @@ static ObjSymbol *abbreviationSymbol(TokenType abbreviationPrefix) {
     }
 }
 
-static void appendToAST(SyntaxObjectArray *ast, SyntaxObject *expr) {
+static void appendToAST(ObjSyntaxPointerArray *ast, ObjSyntax *expr) {
     smartArrayAppend(ast, &expr);
 }
 
 static void synchronize(void) {
     parser.panicMode = false;
 
-    while (!check(TOKEN_EOF)) {
+    while (!parserIsAtEnd()) {
         if (TOKEN_RIGHT_PAREN == tokenGetType(&(parser.previous))) return;
         if (check(TOKEN_LEFT_PAREN)) return;
         parserAdvance();

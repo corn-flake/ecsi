@@ -8,3 +8,4 @@ unity/*
 .gdbhistory
 *.out
 *.kate-swp
+*.scm

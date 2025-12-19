@@ -112,12 +112,12 @@ static char *readFile(char const *path) {
 
     char *buffer = (char *)malloc(fileSize + 1);
     if (NULL == buffer) {
-        fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
+        DIE("Not enough memory to read \"%s\".", path);
     }
 
     size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
     if (bytesRead < fileSize) {
-        fprintf(stderr, "Could not read file \"%s\".\n", path);
+        DIE("Could not read file \"%s\".", path);
     }
     buffer[bytesRead] = '\0';
 

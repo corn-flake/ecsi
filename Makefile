@@ -81,9 +81,9 @@ EXECUTABLE_NAME = ecsi
 
 CC = gcc
 COMPILE = $(CC) -c
-LINK=$(CC) -lm -lreadline
+LINK=$(CC) -lm -lreadline -fsanitize=address
 DEPEND=gcc -MM -MG -MF
-CFLAGS=-I. -I$(UNITY_PATH) -I$(SOURCE_PATH) -DTEST -Wall -Wextra -Wpedantic -g3 -std=gnu11
+CFLAGS=-I. -I$(UNITY_PATH) -I$(SOURCE_PATH) -DTEST -Wall -Wextra -Wpedantic -g3 -fsanitize=address -std=gnu23
 
 RESULTS = $(patsubst $(TEST_PATH)$(TEST_PREFIX)%.c,$(BUILD_RESULTS_PATH)$(TEST_PREFIX)%.txt,$(TEST_SOURCES) )
 

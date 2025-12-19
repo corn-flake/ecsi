@@ -25,10 +25,11 @@
 #include "../value.h"
 #include "parser.h"
 
-typedef SyntaxObject *(*ParseDatumFn)(void);
+typedef ObjSyntax *(*ParseDatumFn)(void);
 
-SyntaxObject *makeSyntaxAtCurrent(Value value);
-SyntaxObject *makeSyntaxFromTokenToCurrent(Value value, Token const *start);
+ObjSyntax *makeSyntaxAtCurrent(Value value);
+ObjSyntax *makeSyntaxAtPrevious(Value value);
+ObjSyntax *makeSyntaxFromTokenToCurrent(Value value, Token const *start);
 
 void formattedErrorAt(Token const *token, char const *format, ...);
 void varArgsFormattedErrorAt(Token const *token, char const *format,

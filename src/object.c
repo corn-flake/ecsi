@@ -59,7 +59,7 @@ static Obj *allocateObject(size_t size, ObjType type);
 static ObjString *allocateString(char *chars, int length, uint32_t hash);
 static uint32_t hashString(char const *key, int length);
 static void printFunction(ObjFunction const *function);
-static bool isList(ObjPair const *pair);
+static bool isList(ObjPair *pair);
 static void printList(ObjPair const *pair);
 static void printPair(ObjPair const *pair);
 static bool objStringEqualToString(ObjString const *string, char const *chars);
@@ -99,6 +99,7 @@ const char *objTypeToString(ObjType type) {
         case OBJ_VECTOR:
             return "OBJ_VECTOR";
         default:
+            printf("Unknown object type: %d\n", type);
             UNREACHABLE();
     }
 }
@@ -484,12 +485,7 @@ static void printPair(ObjPair const *pair) {
     putchar(')');
 }
 
-static bool isList(ObjPair const *pair) {
-    while (IS_PAIR(pair->cdr)) {
-        pair = AS_PAIR(pair->cdr);
-    }
-    return IS_NIL(pair->cdr);
-}
+static bool isList(ObjPair *pair) { return IS_NIL(finalPair(pair)->cdr); }
 
 static void printList(ObjPair const *list) {
     while (!IS_NIL(list->cdr)) {
@@ -502,24 +498,16 @@ static void printList(ObjPair const *list) {
 }
 
 void appendElement(ObjPair *pair, Value value) {
-    ObjPair *originalPair = pair;
     // Nothing to do
     if (IS_NIL(value)) return;
 
-    while (!IS_NIL(pair->cdr)) {
-        if (!IS_PAIR(pair->cdr)) {
-            // We crash here because this function is only called by the parser
-            // and should only be called on valid lists.
-            DIE("%s", "pair given was not a list.");
-        }
-        pair = AS_PAIR(pair->cdr);
-    }
+    ObjPair *final = finalPair(pair);
+    assert(IS_NIL(final->cdr));
 
     push(value);
-    push(OBJ_VAL(originalPair));
+    push(OBJ_VAL(pair));
 
-    ObjPair *tail = newPair(value, NIL_VAL);
-    pair->cdr = OBJ_VAL(tail);
+    final->cdr = CONS(value, NIL_VAL);
 
     pop();  // originalPair
     pop();  // value

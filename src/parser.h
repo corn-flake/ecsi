@@ -25,9 +25,7 @@
 #include "scanner.h"
 #include "value.h"
 
-typedef ObjSyntax SyntaxObject;
-
-typedef SmartArray SyntaxObjectArray;
+typedef SmartArray ObjSyntaxPointerArray;
 
 // Redefine all these macros
 #define EXPR_TYPE(expr) ((expr)->type)
@@ -52,14 +50,14 @@ typedef struct {
     Token current;
     bool hadError;
     bool panicMode;
-    SyntaxObjectArray ast;
+    ObjSyntaxPointerArray ast;
 } Parser;
 
 extern Parser parser;
 
 void initParser(void);
-SyntaxObject *parseExpression(void);
+ObjSyntax *parseExpression(void);
 Value parseDatum(void);
-SyntaxObjectArray parseAllTokens(void);
-void printAST(SyntaxObjectArray const *ast);
-void freeAST(SyntaxObjectArray *ast);
+ObjSyntaxPointerArray parseAllTokens(void);
+void printAST(ObjSyntaxPointerArray const *ast);
+void freeAST(ObjSyntaxPointerArray *ast);

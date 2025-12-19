@@ -58,6 +58,8 @@ void initVM(void) {
 
     initSmartArray(&(vm.gcState.grayStack), smartArrayCheckedRealloc,
                    sizeof(Obj *));
+    vm.gcState.bytesAllocated = 0;
+    vm.gcState.nextGC = 1024 * 1024;
     vm.gcState.isOn = true;
 
     initTable(&vm.globals);

@@ -549,7 +549,7 @@ ObjFunction *compile(char const *source) {
     initScanner(source);
     initParser();
 
-    SyntaxObjectArray ast = parseAllTokens();
+    ObjSyntaxPointerArray ast = parseAllTokens();
 
     if (!parser.hadError) {
         printAST(&ast);

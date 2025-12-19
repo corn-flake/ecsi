@@ -29,11 +29,15 @@
 
 static bool tokensEqual(Token const *t1, Token const *t2);
 
-SyntaxObject *makeSyntaxAtCurrent(Value value) {
+ObjSyntax *makeSyntaxAtCurrent(Value value) {
     return newSyntax(value, CURRENT_LOCATION());
 }
 
-SyntaxObject *makeSyntaxFromTokenToCurrent(Value value, Token const *start) {
+ObjSyntax *makeSyntaxAtPrevious(Value value) {
+    return newSyntax(value, PREVIOUS_LOCATION());
+}
+
+ObjSyntax *makeSyntaxFromTokenToCurrent(Value value, Token const *start) {
     // Both of these pointers are pointers into the same object, the
     // source string, so using an ordering comparison on them is defined
     // behavior.

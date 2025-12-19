@@ -27,49 +27,45 @@
 #include "token_to_type.h"
 #include "value.h"
 
-static SyntaxObject *parseBytevectorElement(void);
-static SyntaxObject *parseVectorUsing(ParseDatumFn parse);
+static ObjSyntax *parseBytevectorElement(void);
+static ObjSyntax *parseVectorUsing(ParseDatumFn parse);
 
-SyntaxObject *symbol(void) {
+ObjSyntax *parseSymbol(void) {
     assert(tokenIsKeyword(&(parser.current)) || check(TOKEN_IDENTIFIER));
     Value sym = OBJ_VAL(tokenToObjSymbol(&(parser.current)));
     parserAdvance();
-    return makeSyntaxAtCurrent(sym);
+    return makeSyntaxAtPrevious(sym);
 }
 
-SyntaxObject *parseNumber(void) {
-    assert(check(TOKEN_NUMBER));
-    Value num = NUMBER_VAL(numberTokenToDouble(&(parser.current)));
-    parserAdvance();
-    return makeSyntaxAtCurrent(num);
+ObjSyntax *parseNumber(void) {
+    consume(TOKEN_NUMBER, "Expect number.");
+    Value num = NUMBER_VAL(numberTokenToDouble(&(parser.previous)));
+    return makeSyntaxAtPrevious(num);
 }
 
-SyntaxObject *parseBoolean(void) {
-    assert(check(TOKEN_BOOLEAN));
-    Value boolean = BOOL_VAL(booleanTokenToBool(&(parser.current)));
-    parserAdvance();
-    return makeSyntaxAtCurrent(boolean);
+ObjSyntax *parseBoolean(void) {
+    consume(TOKEN_BOOLEAN, "Expect boolean.");
+    Value boolean = BOOL_VAL(booleanTokenToBool(&(parser.previous)));
+    return makeSyntaxAtPrevious(boolean);
 }
 
-SyntaxObject *parseCharacter(void) {
-    assert(check(TOKEN_CHARACTER));
-    Value character = CHARACTER_VAL(characterTokenToChar(&(parser.current)));
-    parserAdvance();
-    return makeSyntaxAtCurrent(character);
+ObjSyntax *parseCharacter(void) {
+    consume(TOKEN_CHARACTER, "Expect character");
+    Value character = CHARACTER_VAL(characterTokenToChar(&(parser.previous)));
+    return makeSyntaxAtPrevious(character);
 }
 
-SyntaxObject *parseString(void) {
-    assert(check(TOKEN_CHARACTER));
-    Value string = OBJ_VAL(tokenToObjSymbol(&(parser.current)));
-    parserAdvance();
-    return makeSyntaxAtCurrent(string);
+ObjSyntax *parseString(void) {
+    consume(TOKEN_STRING, "Expect string");
+    Value string = OBJ_VAL(tokenToObjSymbol(&(parser.previous)));
+    return makeSyntaxAtPrevious(string);
 }
 
-SyntaxObject *parseBytevector(void) {
+ObjSyntax *parseBytevector(void) {
     return parseVectorUsing(parseBytevectorElement);
 }
 
-static SyntaxObject *parseBytevectorElement(void) {
+static ObjSyntax *parseBytevectorElement(void) {
     if (!parserMatch(TOKEN_NUMBER)) {
         errorAtCurrent(
             "Members of bytevector must be numbers between 0 "
@@ -89,12 +85,12 @@ static SyntaxObject *parseBytevectorElement(void) {
             "and 255 inclusive.");
     }
 
-    return makeSyntaxAtCurrent(NUMBER_VAL(maybeByte));
+    return makeSyntaxAtPrevious(NUMBER_VAL(maybeByte));
 }
 
-SyntaxObject *parseVector(void) { return parseVectorUsing(parseExpression); }
+ObjSyntax *parseVector(void) { return parseVectorUsing(parseExpression); }
 
-static SyntaxObject *parseVectorUsing(ParseDatumFn parse) {
+static ObjSyntax *parseVectorUsing(ParseDatumFn parse) {
     assert(check(TOKEN_POUND_LEFT_PAREN) || check(TOKEN_POUND_U8_LEFT_PAREN));
     Token const *vectorStart = &(parser.current);
     parserAdvance();

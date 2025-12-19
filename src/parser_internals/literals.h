@@ -20,12 +20,12 @@
 
 #include "../parser.h"
 
-SyntaxObject *symbol(void);
+ObjSyntax *parseSymbol(void);
 
-SyntaxObject *parseNumber(void);
-SyntaxObject *parseBoolean(void);
-SyntaxObject *parseCharacter(void);
-SyntaxObject *parseString(void);
+ObjSyntax *parseNumber(void);
+ObjSyntax *parseBoolean(void);
+ObjSyntax *parseCharacter(void);
+ObjSyntax *parseString(void);
 
-SyntaxObject *parseVector(void);
-SyntaxObject *parseBytevector(void);
+ObjSyntax *parseVector(void);
+ObjSyntax *parseBytevector(void);

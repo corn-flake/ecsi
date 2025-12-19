@@ -84,7 +84,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 #endif
     }
 
-    if (vm.gcState.bytesAllocated > vm.gcState.nextGC) {
+    if (vm.gcState.bytesAllocated > vm.gcState.nextGC && newSize > oldSize) {
         collectGarbage();
     }
 
@@ -166,8 +166,8 @@ static void freeObject(Obj *object) {
             break;
         }
         case OBJ_SYMBOL: {
-            ObjString *text = ((ObjSymbol *)object)->text;
-            FREE_ARRAY(char, text->chars, text->length + 1);
+            // We don't need to free the string because it's already in the
+            // VM's objects list and the GC will take care of it.
             FREE(ObjSymbol, object);
             break;
         }
