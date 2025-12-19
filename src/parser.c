@@ -150,13 +150,14 @@ static ObjSyntax *parseList(void) {
 }
 
 static ObjSyntax *parseAbbreviation(void) {
-    Value abbreviation =
-        OBJ_VAL(newPair(OBJ_VAL(abbreviationSymbol(CURRENT_TYPE())), NIL_VAL));
-    Token const *abbreviationStart = &(parser.current);
+    ObjPair *abbreviation =
+        newPair(OBJ_VAL(abbreviationSymbol(CURRENT_TYPE())), NIL_VAL);
+    Token const abbreviationStart = parser.current;
     parserAdvance();
     Value datum = OBJ_VAL(parseExpression());
-    SET_CDR(abbreviation, datum);
-    return makeSyntaxFromTokenToCurrent(abbreviation, abbreviationStart);
+    appendElement(abbreviation, datum);
+    return makeSyntaxFromTokenToCurrent(OBJ_VAL(abbreviation),
+                                        &abbreviationStart);
 }
 
 static ObjSymbol *abbreviationSymbol(TokenType abbreviationPrefix) {

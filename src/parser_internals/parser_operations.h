@@ -56,8 +56,11 @@ bool currentTokenMatchesString(char *const string);
 #define CURRENT_LOCATION() (parser.current.location)
 #define CURRENT_LINE() (tokenGetLine(&(parser.current)))
 #define CURRENT_TYPE() (tokenGetType(&(parser.current)))
+#define CURRENT_LENGTH() (tokenGetLength(&(parser.current)))
 #define CURRENT_START() (tokenGetStart(&(parser.current)))
+
 #define PREVIOUS_LOCATION() (parser.previous.location)
 #define PREVIOUS_LINE() (tokenGetLine(&(parser.previous)))
 #define PREVIOUS_TYPE() (tokenGetType(&(parser.previous)))
+#define PREVIOUS_LENGTH() (tokenGetType(&(parser.previous)))
 #define PREVIOUS_START() (tokenGetStart(&(parser.previous)))
