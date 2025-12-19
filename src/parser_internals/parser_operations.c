@@ -27,7 +27,6 @@
 #include "../scanner.h"
 #include "../value.h"
 
-static inline size_t min(size_t a, size_t b) { return a < b ? a : b; }
 static bool tokensEqual(Token const *t1, Token const *t2);
 
 SyntaxObject *makeSyntaxAtCurrent(Value value) {
@@ -38,12 +37,11 @@ SyntaxObject *makeSyntaxFromTokenToCurrent(Value value, Token const *start) {
     // Both of these pointers are pointers into the same object, the
     // source string, so using an ordering comparison on them is defined
     // behavior.
-    assert(tokenGetStart(&(parser.current)) > tokenGetStart(start));
+    assert(CURRENT_START() > tokenGetStart(start));
 
-    SourceLocation span = {
-        .start = tokenGetStart(start),
-        .length = tokenGetStart(&(parser.current)) - tokenGetStart(start),
-        .line = tokenGetLine(start)};
+    SourceLocation span = {.start = tokenGetStart(start),
+                           .length = CURRENT_START() - tokenGetStart(start),
+                           .line = tokenGetLine(start)};
 
     return newSyntax(value, span);
 }
@@ -107,8 +105,8 @@ void parserAdvance(void) {
 
     while (true) {
         parser.current = scanToken();
-        if (TOKEN_ERROR != tokenGetType(&(parser.current))) break;
-        errorAt(&(parser.current), tokenGetStart(&(parser.current)));
+        if (TOKEN_ERROR != CURRENT_TYPE()) break;
+        errorAt(&(parser.current), CURRENT_START());
     }
 }
 
@@ -120,7 +118,7 @@ void consume(TokenType type, char const *message) {
     errorAtCurrent(message);
 }
 
-bool check(TokenType type) { return type == tokenGetType(&(parser.current)); }
+bool check(TokenType type) { return type == CURRENT_TYPE(); }
 
 bool matchToken(Token const *token) {
     if (checkToken(token)) {
@@ -152,15 +150,10 @@ bool canContinueList(void) {
     return !check(TOKEN_RIGHT_PAREN) && !parserIsAtEnd();
 }
 
-bool tokenMatchesString(Token *token, char *const string) {
-    return !memcmp(tokenGetStart(token), string,
-                   min(strlen(string), tokenGetLength(token)));
-}
-
 bool currentTokenMatchesString(char *const string) {
-    return tokenMatchesString(&(parser.current), string);
+    return textOfTokenEqualToString(&(parser.current), string);
 }
 
 bool previousTokenMatchesString(char *const string) {
-    return tokenMatchesString(&(parser.previous), string);
+    return textOfTokenEqualToString(&(parser.previous), string);
 }

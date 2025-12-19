@@ -78,9 +78,9 @@ SyntaxObjectArray parseAllTokens(void) {
 }
 
 void freeAST(SyntaxObjectArray *ast) {
+    freeSmartArray(ast);
     turnOnGarbageCollector();
     collectGarbage();
-    freeSmartArray(ast);
 }
 
 SyntaxObject *parseExpression(void) {
