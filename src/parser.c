@@ -127,11 +127,11 @@ ObjSyntax *parseExpression(void) {
 
 static ObjSyntax *parseList(void) {
     consume(TOKEN_LEFT_PAREN, "Expect '(' to open list.");
-    Token const *listStart = &(parser.previous);
+    Token const listStart = parser.previous;
 
     if (!canContinueList()) {
         if (check(TOKEN_RIGHT_PAREN)) {
-            return makeSyntaxFromTokenToCurrent(NIL_VAL, listStart);
+            return makeSyntaxFromTokenToCurrent(NIL_VAL, &listStart);
         } else {
             errorAtCurrent("Expect parenthesis to close list.");
         }
@@ -146,7 +146,7 @@ static ObjSyntax *parseList(void) {
 
     consume(TOKEN_RIGHT_PAREN, "Expect right parenthesis to close list.");
 
-    return makeSyntaxFromTokenToCurrent(OBJ_VAL(list), listStart);
+    return makeSyntaxFromTokenToCurrent(OBJ_VAL(list), &listStart);
 }
 
 static ObjSyntax *parseAbbreviation(void) {
