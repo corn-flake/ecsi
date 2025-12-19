@@ -107,7 +107,7 @@ void parserAdvance(void) {
 
     while (true) {
         parser.current = scanToken();
-        if (TOKEN_ERROR == tokenGetType(&(parser.current))) break;
+        if (TOKEN_ERROR != tokenGetType(&(parser.current))) break;
         errorAt(&(parser.current), tokenGetStart(&(parser.current)));
     }
 }

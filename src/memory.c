@@ -15,7 +15,7 @@
 
   You should have received a copy of the GNU General Public License along with
   Ecsi. If not, see <https://www.gnu.org/licenses/>.
- */
+*/
 
 #include "memory.h"
 
@@ -62,8 +62,13 @@ void *checkedMalloc(size_t size) {
 }
 
 void *checkedRealloc(void *ptr, size_t newSize) {
+    if (0 == newSize) {
+        free(ptr);
+        return NULL;
+    }
+
     void *result = realloc(ptr, newSize);
-    if (newSize > 0 && NULL == result) {
+    if (NULL == result) {
         DIE("Failed to grow memory at %p to %zu bytes.", ptr, newSize);
     }
     return result;
@@ -263,6 +268,9 @@ static void sweep(void) {
     Obj *previous = NULL;
     Obj *object = vm.objects;
     while (object != NULL) {
+#ifdef DEBUG_LOG_GC
+        printf("object is: %p\n", (void *)object);
+#endif
         if (object->isMarked) {
             object->isMarked = false;
             previous = object;
@@ -281,17 +289,31 @@ static void sweep(void) {
     }
 }
 
-void turnOffGarbageCollector(void) { vm.gcState.isOn = false; }
+void turnOffGarbageCollector(void) {
+#ifdef DEBUG_LOG_GC
+    puts("Garbage collector has been turned off.");
+#endif
+    vm.gcState.isOn = false;
+}
 
-void turnOnGarbageCollector(void) { vm.gcState.isOn = true; }
+void turnOnGarbageCollector(void) {
+#ifdef DEBUG_LOG_GC
+    puts("Garbage collector has been turned on.");
+#endif
+    vm.gcState.isOn = true;
+}
 
 void collectGarbage(void) {
 #ifdef DEBUG_LOG_GC
     printStack();
     printf("\n");
-    printf("-- gc begin\n");
-    size_t before = vm.bytesAllocated;
+    if (vm.gcState.isOn) {
+        printf("-- gc begin\n");
+    }
+    size_t before = vm.gcState.bytesAllocated;
 #endif
+
+    if (!vm.gcState.isOn) return;
 
     markRoots();
     traceReferences();
@@ -303,6 +325,7 @@ void collectGarbage(void) {
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
     printf("    collected %zu bytes (from %zu to %zu) next at %zu\n",
-           before - vm.bytesAllocated, before, vm.bytesAllocated, vm.nextGC);
+           before - vm.gcState.bytesAllocated, before,
+           vm.gcState.bytesAllocated, vm.gcState.nextGC);
 #endif
 }

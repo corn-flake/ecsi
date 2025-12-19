@@ -85,9 +85,10 @@ void freeAST(SyntaxObjectArray *ast) {
 
 SyntaxObject *parseExpression(void) {
     if (tokenIsKeyword(&(parser.current)) || check(TOKEN_IDENTIFIER)) {
-        return makeSyntaxAtCurrent(
-            OBJ_VAL(copyString(tokenGetStart(&(parser.current)),
-                               tokenGetLength(&(parser.current)))));
+        ObjString *string = tokenToObjString(&(parser.current));
+        SyntaxObject *identifier = makeSyntaxAtCurrent(OBJ_VAL(string));
+        parserAdvance();
+        return identifier;
     }
 
     switch (CURRENT_TYPE()) {
@@ -101,7 +102,6 @@ SyntaxObject *parseExpression(void) {
         case TOKEN_STRING:
             return parseString();
         case TOKEN_POUND_U8_LEFT_PAREN:
-            parserAdvance();
             return parseBytevector();
 
         // Compound datums
@@ -130,14 +130,15 @@ SyntaxObject *parseExpression(void) {
 }
 
 static SyntaxObject *parseList(void) {
-    assert(check(TOKEN_LEFT_PAREN));
-    Token const *listStart = &(parser.current);
-    parserAdvance();
+    consume(TOKEN_LEFT_PAREN, "Expect '(' to open list.");
+    Token const *listStart = &(parser.previous);
 
-    if (!canContinueList() && check(TOKEN_RIGHT_PAREN)) {
-        return makeSyntaxFromTokenToCurrent(NIL_VAL, listStart);
-    } else {
-        errorAtCurrent("Expect parenthesis to close list.");
+    if (!canContinueList()) {
+        if (check(TOKEN_RIGHT_PAREN)) {
+            return makeSyntaxFromTokenToCurrent(NIL_VAL, listStart);
+        } else {
+            errorAtCurrent("Expect parenthesis to close list.");
+        }
     }
 
     ObjPair *list = newPair(OBJ_VAL(parseExpression()), NIL_VAL);

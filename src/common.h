@@ -42,13 +42,13 @@
   If defined, every time the GC frees an object it will print it
   and say that it's being freed.
 */
-// #define DEBUG_FREE_OBJECTS
+#define DEBUG_FREE_OBJECTS
 
 /*
   If defined, prints log information about what the
   garbage collector is doing.
 */
-// #define DEBUG_LOG_GC
+#define DEBUG_LOG_GC
 
 // If defined, the VM will print the stack whenever the stack is changed.
 // #define DEBUG_STACK

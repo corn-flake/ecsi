@@ -404,7 +404,9 @@ ObjSymbol *newSymbol(char const *chars, int length) {
 }
 
 ObjSyntax *newSyntax(Value value, SourceLocation location) {
+    push(value);
     ObjSyntax *syntax = ALLOCATE_OBJ(ObjSyntax, OBJ_SYNTAX);
+    pop();
     syntax->value = value;
     syntax->location = location;
     return syntax;
