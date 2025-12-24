@@ -26,7 +26,6 @@
 #include <string.h>
 
 #include "common.h"
-#include "memory.h"
 #include "object.h"
 #include "scanner_internals/character_type_tests.h"
 #include "scanner_internals/identifier.h"
@@ -81,6 +80,11 @@ char const *tokenTypeToString(TokenType type) {
 
 bool textOfTokenEqualToString(Token const *token, char const *string) {
     return strncmp(tokenGetStart(token), string, tokenGetLength(token));
+}
+
+bool tokenIsKeyword(Token const *token) {
+    return TOKEN_AND <= tokenGetType(token) &&
+           tokenGetType(token) <= TOKEN_WHEN;
 }
 
 void printToken(Token const *token) {

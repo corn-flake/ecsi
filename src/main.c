@@ -26,9 +26,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 
-#include "chunk.h"
 #include "common.h"
-#include "debug.h"
 #include "vm.h"
 
 // Run interactively
@@ -53,25 +51,19 @@ static void showWarranty(void);
 static void showCopying(void);
 
 int main(int argc, char const *argv[]) {
-    //    showStartupCopyingNotice();
-    /* initVM(); */
+    showStartupCopyingNotice();
+    initVM();
 
-    /* if (1 == argc) { */
-    /*     repl(); */
-    /* } else if (2 == argc) { */
-    /*     runFile(argv[1]); */
-    /* } else { */
-    /*     fprintf(stderr, "%s\n", "Usage: ecsi [path]"); */
-    /*     exit(64); */
-    /* } */
-
-    /* freeVM(); */
-
-    for (int i = 0; i < 100; i++) {
-        printf("i = %d\n", i);
-        initVM();
-        freeVM();
+    if (1 == argc) {
+        repl();
+    } else if (2 == argc) {
+        runFile(argv[1]);
+    } else {
+        fprintf(stderr, "%s\n", "Usage: ecsi [path]");
+        exit(64);
     }
+
+    freeVM();
 
     return 0;
 }
@@ -120,12 +112,12 @@ static char *readFile(char const *path) {
 
     char *buffer = (char *)malloc(fileSize + 1);
     if (NULL == buffer) {
-        fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
+        DIE("Not enough memory to read \"%s\".", path);
     }
 
     size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
     if (bytesRead < fileSize) {
-        fprintf(stderr, "Could not read file \"%s\".\n", path);
+        DIE("Could not read file \"%s\".", path);
     }
     buffer[bytesRead] = '\0';
 

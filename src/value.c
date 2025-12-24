@@ -27,6 +27,7 @@
 #include "memory.h"
 #include "object.h"
 #include "smart_array.h"
+#include "vm.h"
 
 // Return heap-allocated string representation of b.
 static char *booleanToString(bool b);
@@ -75,7 +76,9 @@ void initValueArray(ValueArray *array) {
 }
 
 void writeValueArray(ValueArray *array, Value value) {
+    push(value);
     smartArrayAppend(array, &value);
+    pop();
 }
 
 Value getValueArrayAt(ValueArray const *array, size_t index) {

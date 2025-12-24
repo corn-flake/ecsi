@@ -18,95 +18,54 @@
 
 #include "literals.h"
 
+#include <assert.h>
+
 #include "../object.h"
 #include "../parser.h"
 #include "parser_operations.h"
+#include "scanner.h"
 #include "token_to_type.h"
+#include "value.h"
 
-static Value parseBytevectorElement(void);
+static ObjSyntax *parseBytevectorElement(void);
+static ObjSyntax *parseVectorUsing(ParseDatumFn parse);
 
-static ExprLiteral *makeNonQuotedLiteral(Value value);
-
-Value parseVectorUsing(ParseDatumFn parse) {
-    ObjVector *vector = newVector();
-    if (parserMatch(TOKEN_RIGHT_PAREN)) {
-        return OBJ_VAL(vector);
-    }
-
-    while (canContinueList()) {
-        vectorAppend(vector, parse());
-    }
-
-    if (!parserMatch(TOKEN_RIGHT_PAREN)) {
-        errorAtCurrent("Expect ')' to close vector literal.");
-    }
-
-    return OBJ_VAL(vector);
-}
-
-ExprLiteral *symbol(void) {
-    Value sym = OBJ_VAL(tokenToObjSymbol(&(parser.current)));
+ObjSyntax *parseSymbol(void) {
+    assert(tokenIsKeyword(&(parser.current)) || check(TOKEN_IDENTIFIER));
+    Value sym = OBJ_VAL(tokenToObjString(&(parser.current)));
     parserAdvance();
-    return makeLiteral(true, sym);
+    return makeSyntaxAtPrevious(sym);
 }
 
-ExprLiteral *parseNumber(void) {
-    if (!check(TOKEN_NUMBER)) {
-        errorAtCurrent("Expect number.");
-    }
-    return parseNumberNoCheck();
+ObjSyntax *parseNumber(void) {
+    consume(TOKEN_NUMBER, "Expect number.");
+    Value num = NUMBER_VAL(numberTokenToDouble(&(parser.previous)));
+    return makeSyntaxAtPrevious(num);
 }
 
-ExprLiteral *parseBoolean(void) {
-    if (!check(TOKEN_BOOLEAN)) {
-        errorAtCurrent("Expect boolean.");
-    }
-    return parseBooleanNoCheck();
+ObjSyntax *parseBoolean(void) {
+    consume(TOKEN_BOOLEAN, "Expect boolean.");
+    Value boolean = BOOL_VAL(booleanTokenToBool(&(parser.previous)));
+    return makeSyntaxAtPrevious(boolean);
 }
 
-ExprLiteral *parseCharacter(void) {
-    if (!check(TOKEN_CHARACTER)) {
-        errorAtCurrent("Expect character.");
-    }
-    return parseCharacterNoCheck();
+ObjSyntax *parseCharacter(void) {
+    consume(TOKEN_CHARACTER, "Expect character");
+    Value character = CHARACTER_VAL(characterTokenToChar(&(parser.previous)));
+    return makeSyntaxAtPrevious(character);
 }
 
-ExprLiteral *parseString(void) {
-    if (!check(TOKEN_STRING)) {
-        errorAtCurrent("Expect string.");
-    }
-    return parseStringNoCheck();
+ObjSyntax *parseString(void) {
+    consume(TOKEN_STRING, "Expect string");
+    Value string = OBJ_VAL(tokenToObjSymbol(&(parser.previous)));
+    return makeSyntaxAtPrevious(string);
 }
 
-ExprLiteral *parseNumberNoCheck(void) {
-    Value num = NUMBER_VAL(numberTokenToDouble(&(parser.current)));
-    parserAdvance();
-    return makeNonQuotedLiteral(num);
+ObjSyntax *parseBytevector(void) {
+    return parseVectorUsing(parseBytevectorElement);
 }
 
-ExprLiteral *parseBooleanNoCheck(void) {
-    Value b = BOOL_VAL(booleanTokenToBool(&(parser.current)));
-    parserAdvance();
-    return makeNonQuotedLiteral(b);
-}
-
-ExprLiteral *parseCharacterNoCheck(void) {
-    Value c = CHARACTER_VAL(characterTokenToChar(&(parser.current)));
-    parserAdvance();
-    return makeNonQuotedLiteral(c);
-}
-
-ExprLiteral *parseStringNoCheck(void) {
-    Value s = OBJ_VAL(tokenToObjString(&(parser.current)));
-    parserAdvance();
-    return makeNonQuotedLiteral(s);
-}
-
-ExprLiteral *parseBytevector(void) {
-    return makeNonQuotedLiteral(parseVectorUsing(parseBytevectorElement));
-}
-
-static Value parseBytevectorElement(void) {
+static ObjSyntax *parseBytevectorElement(void) {
     if (!parserMatch(TOKEN_NUMBER)) {
         errorAtCurrent(
             "Members of bytevector must be numbers between 0 "
@@ -126,21 +85,23 @@ static Value parseBytevectorElement(void) {
             "and 255 inclusive.");
     }
 
-    return NUMBER_VAL(maybeByte);
+    return makeSyntaxAtPrevious(NUMBER_VAL(maybeByte));
 }
 
-ExprLiteral *parseVector(void) {
-    return makeNonQuotedLiteral(parseVectorUsing(parseDatum));
-}
+ObjSyntax *parseVector(void) { return parseVectorUsing(parseExpression); }
 
-ExprLiteral *makeLiteral(bool isQuoted, Value value) {
-    ExprLiteral *literal =
-        ALLOCATE_EXPR(ExprLiteral, EXPR_LITERAL, CURRENT_LOCATION());
-    literal->isQuotation = isQuoted;
-    literal->value = value;
-    return literal;
-}
+static ObjSyntax *parseVectorUsing(ParseDatumFn parse) {
+    assert(check(TOKEN_POUND_LEFT_PAREN) || check(TOKEN_POUND_U8_LEFT_PAREN));
+    Token const *vectorStart = &(parser.current);
+    parserAdvance();
 
-static ExprLiteral *makeNonQuotedLiteral(Value value) {
-    return makeLiteral(false, value);
+    ObjVector *vector = newVector();
+
+    while (canContinueList()) {
+        vectorAppend(vector, OBJ_VAL(parse()));
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' to close vector.");
+
+    return makeSyntaxFromTokenToCurrent(OBJ_VAL(vector), vectorStart);
 }

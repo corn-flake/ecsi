@@ -58,7 +58,7 @@ BUILD_RESULTS_PATH = build/results/
 # Subdirectories in build/objs/
 OBJ_SUBDIRS = $(addprefix $(OBJS_PATH)/, parser_internals/ scanner_internals/)
 
-_OBJS_NO_MAIN = smart_array.o chunk.o compiler.o debug.o line_number.o memory.o object.o parser.o scanner.o table.o value.o vm.o parser_internals/derived_expressions.o parser_internals/literals.o parser_internals/parser_operations.o parser_internals/token_to_type.o scanner_internals/character_type_tests.o scanner_internals/hexadecimal.o scanner_internals/identifier.o scanner_internals/intertoken_space.o scanner_internals/pound_something.o scanner_internals/scan_booleans.o scanner_internals/scanner_operations.o
+_OBJS_NO_MAIN = smart_array.o chunk.o compiler.o debug.o line_number.o memory.o object.o parser.o scanner.o table.o value.o vm.o parser_internals/literals.o parser_internals/parser_operations.o parser_internals/token_to_type.o scanner_internals/character_type_tests.o scanner_internals/hexadecimal.o scanner_internals/identifier.o scanner_internals/intertoken_space.o scanner_internals/pound_something.o scanner_internals/scan_booleans.o scanner_internals/scanner_operations.o
 
 _OBJS =  $(_OBJS_NO_MAIN) main.o
 
@@ -81,9 +81,9 @@ EXECUTABLE_NAME = ecsi
 
 CC = gcc
 COMPILE = $(CC) -c
-LINK=$(CC) -lm -lreadline
+LINK=$(CC) -lm -lreadline -fsanitize=address
 DEPEND=gcc -MM -MG -MF
-CFLAGS=-I. -I$(UNITY_PATH) -I$(SOURCE_PATH) -DTEST -Wall -Wextra -Wpedantic -fanalyzer -g3 -std=gnu11
+CFLAGS=-I. -I$(UNITY_PATH) -I$(SOURCE_PATH) -DTEST -Wall -Wextra -Wpedantic -g3 -fsanitize=address -std=gnu23
 
 RESULTS = $(patsubst $(TEST_PATH)$(TEST_PREFIX)%.c,$(BUILD_RESULTS_PATH)$(TEST_PREFIX)%.txt,$(TEST_SOURCES) )
 
@@ -156,7 +156,7 @@ memory.o: memory.c compiler.c object.c parser.c table.c value.c vm.c common.h
 
 object.o: object.c memory.c table.c value.c vm.c 
 
-parser.o: parser.c memory.c object.c parser_internals/derived_expressions.c parser_internals/literals.c parser_internals/parser_operations.c scanner.c value.c vm.c smart_array.c
+parser.o: parser.c memory.c object.c parser_internals/literals.c parser_internals/parser_operations.c scanner.c value.c vm.c smart_array.c
 
 scanner.o: scanner.c memory.c object.c scanner_internals/character_type_tests.c scanner_internals/identifier.c scanner_internals/intertoken_space.c scanner_internals/pound_something.c scanner_internals/scanner_operations.c 
 
@@ -165,8 +165,6 @@ table.o: table.c memory.c object.c value.c
 value.o: value.c memory.c object.c smart_array.c
 
 vm.o: vm.c chunk.c compiler.c debug.c memory.c object.c table.c value.c smart_array.c
-
-parser_internals/derived_expressions.o: parser_internals/derived_expressions.c object.c parser.c vm.c
 
 parser_internals/literals.o: parser_internals/literals.c object.c parser.c parser_internals/parser_operations.c parser_internals/token_to_type.c
 

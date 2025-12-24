@@ -35,12 +35,12 @@ LineNumber getLineNumberArrayAt(LineNumberArray const *array, size_t i) {
 }
 
 unsigned int writeNumber(LineNumberArray *array, unsigned int lineNumber) {
-    if (getSmartArrayCount(array) > 0 &&
+    if (!smartArrayIsEmpty(array) &&
         getLineNumberArrayAt(array, getSmartArrayCount(array) - 1).lineNumber ==
             lineNumber) {
         increaseRepeatsOfEntryAt(array, getSmartArrayCount(array) - 1);
         return getLineNumberArrayAt(array, getSmartArrayCount(array) - 1)
-            .repeats;
+            .lineNumber;
     }
 
     LineNumber encodedNumber = {

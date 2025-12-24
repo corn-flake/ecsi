@@ -18,26 +18,36 @@
 
 #include "parser_operations.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "../memory.h"
 #include "../object.h"
 #include "../parser.h"
 #include "../scanner.h"
 #include "../value.h"
-#include "../vm.h"
 
-static inline size_t min(size_t a, size_t b) { return a < b ? a : b; }
 static bool tokensEqual(Token const *t1, Token const *t2);
 
-Expr *allocateExpr(size_t size, ExprType type, SourceLocation location) {
-    // We cast to Expr * to make it clear that this is an Expr object
-    // even though it might have a different size.
-    Expr *expr = (Expr *)checkedMalloc(size);
-    expr->type = type;
-    expr->location = location;
-    return expr;
+ObjSyntax *makeSyntaxAtCurrent(Value value) {
+    return newSyntax(value, CURRENT_LOCATION());
+}
+
+ObjSyntax *makeSyntaxAtPrevious(Value value) {
+    return newSyntax(value, PREVIOUS_LOCATION());
+}
+
+ObjSyntax *makeSyntaxFromTokenToCurrent(Value value, Token const *start) {
+    // Both of these pointers are pointers into the same object, the
+    // source string, so using an ordering comparison on them is defined
+    // behavior.
+    assert(CURRENT_START() > tokenGetStart(start));
+
+    SourceLocation span = {.start = tokenGetStart(start),
+                           .length = CURRENT_START() - tokenGetStart(start),
+                           .line = tokenGetLine(start)};
+
+    return newSyntax(value, span);
 }
 
 void errorAt(Token const *token, char const *message) {
@@ -99,27 +109,21 @@ void parserAdvance(void) {
 
     while (true) {
         parser.current = scanToken();
-        if (TOKEN_ERROR == tokenGetType(&(parser.current))) break;
-        errorAt(&(parser.current), tokenGetStart(&(parser.current)));
+        if (TOKEN_ERROR != CURRENT_TYPE()) break;
+        errorAt(&(parser.current), CURRENT_START());
     }
 }
 
 void consume(TokenType type, char const *message) {
-    if (type == tokenGetType(&(parser.current))) {
-        parserAdvance();
-        return;
-    }
-    errorAtCurrent(message);
+    if (!parserMatch(type)) errorAtCurrent(message);
 }
 
-bool check(TokenType type) { return type == tokenGetType(&(parser.current)); }
+bool check(TokenType type) { return type == CURRENT_TYPE(); }
 
 bool matchToken(Token const *token) {
-    if (checkToken(token)) {
-        parserAdvance();
-        return true;
-    }
-    return false;
+    if (!checkToken(token)) return false;
+    parserAdvance();
+    return true;
 }
 
 bool checkToken(Token const *token) {
@@ -141,121 +145,13 @@ bool parserMatch(TokenType type) {
 }
 
 bool canContinueList(void) {
-    return !check(TOKEN_RIGHT_PAREN) && !check(TOKEN_EOF);
-}
-
-bool tokenMatchesString(Token *token, char *const string) {
-    return !memcmp(tokenGetStart(token), string,
-                   min(strlen(string), tokenGetLength(token)));
+    return !check(TOKEN_RIGHT_PAREN) && !parserIsAtEnd();
 }
 
 bool currentTokenMatchesString(char *const string) {
-    return tokenMatchesString(&(parser.current), string);
+    return textOfTokenEqualToString(&(parser.current), string);
 }
 
 bool previousTokenMatchesString(char *const string) {
-    return tokenMatchesString(&(parser.previous), string);
+    return textOfTokenEqualToString(&(parser.previous), string);
 }
-
-Value parseListUsing(ParseDatumFn parse) {
-    return parseNExprsIntoList(parse, -1);
-}
-
-Value parseNExprsIntoList(ParseDatumFn parse, int n) {
-    if (0 == n) {
-        consume(TOKEN_RIGHT_PAREN,
-                "Expect right parenthesis to finish empty list");
-        return NIL_VAL;
-    }
-
-    if (!canContinueList()) {
-        if (parserMatch(TOKEN_RIGHT_PAREN)) {
-            if (-1 != n) {
-                formattedErrorAtCurrent(
-                    "Expected list of %d elements but didn't find any "
-                    "elements.",
-                    n);
-            }
-            return NIL_VAL;
-        }
-
-        errorAtCurrent("Expect ')' to close list.");
-        return NIL_VAL;
-    }
-
-    Value expr = parse();
-
-    Value list = guardedCons(expr, NIL_VAL);
-    // We push here to avoid pushing in every iteration before calling
-    // parse.
-    push(list);
-
-    if (-1 == n) {
-        while (canContinueList()) {
-            expr = parse();
-            guardedAppend(list, expr);
-        }
-    } else {
-        for (int i = 1; i < n; i++) {
-            if (check(TOKEN_RIGHT_PAREN)) {
-                formattedErrorAtCurrent(
-                    "Expected list of %d elements but only found %d "
-                    "elements.",
-                    n, i);
-                break;
-            }
-            expr = parse();
-            guardedAppend(list, expr);
-        }
-    }
-
-    pop();  // list
-    consume(TOKEN_RIGHT_PAREN, "Expect ')' to close list.");
-
-    return list;
-}
-
-Value parseAtLeastNExprsUsing(ParseDatumFn parse, size_t n) {
-    if (0 == n && parserMatch(TOKEN_RIGHT_PAREN)) {
-        return NIL_VAL;
-    }
-
-    // At this point we know there is at least one expression to parse,
-    // so it is safe to call parse. Even if the user expects 0, it's fine.
-    Value expr = parse();
-    Value list = guardedCons(expr, NIL_VAL);
-    size_t exprsParsed = 1;
-
-    push(list);
-    for (; exprsParsed < n && canContinueList(); exprsParsed++) {
-        expr = parse();
-        appendElement(AS_PAIR(list), expr);
-    }
-    pop();  // list
-
-    // Not enough exprs
-    if (exprsParsed < n) {
-        formattedErrorAtCurrent(
-            "Expected at least %d expressions but only found %d", n,
-            exprsParsed);
-        return list;
-    }
-
-    push(list);
-    while (canContinueList()) {
-        expr = parse();
-        appendElement(AS_PAIR(list), expr);
-    }
-    pop();  // list
-
-    consume(TOKEN_RIGHT_PAREN, "Expect ')' to close list.");
-
-    return list;
-}
-
-Value parseListOfExpressions() { return NIL_VAL; }
-
-void parseExpressionsUntilRightParen(ExprPointerArray *array) {
-    while (!check(TOKEN_RIGHT_PAREN)) {
-    }
-} 

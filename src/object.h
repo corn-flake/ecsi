@@ -21,9 +21,11 @@
 
 #include <stdint.h>
 
+struct ObjSymbol;
+typedef struct ObjSymbol ObjSymbol;
+
 #include "chunk.h"
-#include "common.h"
-#include "table.h"
+#include "scanner.h"
 #include "value.h"
 
 // Retrieve the object type value. Value must be an object.
@@ -34,6 +36,7 @@
 #define IS_PAIR(value) isObjType(value, OBJ_PAIR)
 #define IS_STRING(value) isObjType(value, OBJ_STRING)
 #define IS_SYMBOL(value) isObjType(value, OBJ_SYMBOL)
+#define IS_SYNTAX(value) isObjType(value, OBJ_SYNTAX)
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
 #define IS_UPVALUE(value) isObjType(value, OBJ_UPVALUE)
 #define IS_VECTOR(value) isObjType(value, OBJ_VECTOR)
@@ -44,6 +47,7 @@
 #define AS_STRING(value) ((ObjString *)AS_OBJ(value))
 #define AS_CSTRING(value) (((ObjString *)AS_OBJ(value))->chars)
 #define AS_SYMBOL(value) ((ObjSymbol *)AS_OBJ(value))
+#define AS_SYNTAX(value) ((ObjSyntax *)AS_OBJ(value))
 #define AS_NATIVE(value) (((ObjNative *)AS_OBJ(value))->function)
 #define AS_UPVALUE(value) ((ObjUpvalue *)AS_OBJ(value))
 #define AS_VECTOR(value) ((ObjVector *)AS_OBJ(value))
@@ -95,6 +99,7 @@ typedef enum {
     OBJ_PAIR,
     OBJ_STRING,
     OBJ_SYMBOL,
+    OBJ_SYNTAX,
     OBJ_NATIVE,
     OBJ_UPVALUE,
     OBJ_VECTOR,
@@ -121,6 +126,12 @@ struct ObjString {
     // every time we look for a key in the hash table
     uint32_t hash;  // The hash of the string, calculated with hashString.
 };
+
+typedef struct {
+    Obj obj;
+    Value value;
+    SourceLocation location;
+} ObjSyntax;
 
 typedef struct ObjUpvalue {
     Obj obj;
@@ -167,11 +178,11 @@ typedef struct {
     ValueArray array;
 } ObjVector;
 
-typedef struct {
+struct ObjSymbol {
     Obj obj;
     ObjString *text;
     Value value;
-} ObjSymbol;
+};
 
 /*
   Determine whether value is an object of type type.
@@ -219,6 +230,9 @@ ObjUpvalue *newUpvalue(Value *slot);
 
 // Create a new symbol, length long, with chars as its text.
 ObjSymbol *newSymbol(char const *chars, int length);
+
+// Create a new syntax object with value as its value at location.
+ObjSyntax *newSyntax(Value value, SourceLocation location);
 
 // Print the text representation of value, interpreted as an object.
 void printObject(Value value);

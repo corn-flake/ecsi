@@ -24,12 +24,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
 #include "memory.h"
 #include "object.h"
-#include "parser_internals/derived_expressions.h"
 #include "parser_internals/literals.h"
 #include "parser_internals/parser_operations.h"
-#include "parser_internals/token_to_type.h"
 #include "scanner.h"
 #include "smart_array.h"
 #include "value.h"
@@ -37,43 +36,13 @@
 Parser parser;
 
 static void synchronize(void);
-static Expr *parseListBasedExpression(void);
-static ExprLiteral *parseQuotation(void);
 
-static inline void initAST(AST *ast);
-static void appendToAST(AST *ast, Expr *expr);
+static ObjSyntax *parseList(void);
+static ObjSyntax *parseAbbreviation(void);
+static ObjSymbol *abbreviationSymbol(TokenType abbreviationPrefix);
 
-static void freeExpr(Expr *expr);
-
-// Parses a procedure call.
-static ExprCall *parseCall(void);
-
-// Parses a lambda expression.
-static ExprLambda *parseLambda(void);
-
-// Parses an if expression.
-static ExprIf *parseIf(void);
-
-// Parses a set! expression.
-static ExprSet *parseSet(void);
-
-// Parses an identifier.
-static ExprIdentifier *parseIdentifier(void);
-
-// Parses a body (see r7rs standard, pg. 63)
-static ExprBody *parseBody(void);
-
-// Attempts to parse a definition. If it cannot parse one, it returns NULL.
-static ExprDefinition *tryToParseDefinition(void);
-
-// Initializes an ArgumentList.
-static inline void initArgumentList(ArgumentList *argList);
-
-// Parses as many identifiers as possible into an argument list.
-static void parseArgumentList(ArgumentList *argList);
-
-static inline void initExprPointerArray(ExprPointerArray *array);
-static void appendToExprPointerArray(ExprPointerArray *array, Expr *expr);
+static inline void initAST(ObjSyntaxPointerArray *ast);
+static void appendToAST(ObjSyntaxPointerArray *ast, ObjSyntax *expr);
 
 void initParser(void) {
     parser.current = scanToken();
@@ -81,60 +50,66 @@ void initParser(void) {
     parser.hadError = false;
     parser.panicMode = false;
     initAST(&(parser.ast));
+    turnOffGarbageCollector();
 }
 
-static void initAST(AST *ast) { initExprPointerArray(ast); }
+static void initAST(ObjSyntaxPointerArray *ast) {
+    initSmartArray(ast, smartArrayCheckedRealloc, sizeof(ObjSyntax *));
+}
 
-void printAST(AST const *ast) { puts("TODO: printAST"); }
+void printAST(ObjSyntaxPointerArray const *ast) {
+    for (size_t i = 0, currentLine = 1; i < getSmartArrayCount(ast); i++) {
+        if (SMART_ARRAY_AT(ast, i, ObjSyntax *)->location.line != currentLine) {
+            putchar('\n');
+            currentLine = SMART_ARRAY_AT(ast, i, ObjSyntax *)->location.line;
+        }
 
-AST parseAllTokens(void) {
-    while (!check(TOKEN_EOF)) {
+        printValue(SMART_ARRAY_AT(ast, i, ObjSyntax *)->value);
+    }
+}
+
+ObjSyntaxPointerArray parseAllTokens(void) {
+    while (!parserIsAtEnd()) {
         appendToAST(&(parser.ast), parseExpression());
     }
+
     return parser.ast;
 }
 
-void freeAST(AST *ast) {
-    for (size_t i = 0; i < getSmartArrayCount(ast); i++) {
-        freeExpr(SMART_ARRAY_AT(ast, i, Expr *));
-    }
+void freeAST(ObjSyntaxPointerArray *ast) {
+    freeSmartArray(ast);
+    turnOnGarbageCollector();
+    collectGarbage();
 }
 
-static void freeExpr(Expr *expr) { return; }
+ObjSyntax *parseExpression(void) {
+    if (tokenIsKeyword(&(parser.current)) || check(TOKEN_IDENTIFIER)) {
+        return parseSymbol();
+    }
 
-Expr *parseExpression(void) {
     switch (CURRENT_TYPE()) {
-            // Literals
-            // Self evaluating values
+        // Simple datums
         case TOKEN_BOOLEAN:
-            return (Expr *)parseBooleanNoCheck();
+            return parseBoolean();
         case TOKEN_NUMBER:
-            return (Expr *)parseNumberNoCheck();
+            return parseNumber();
         case TOKEN_CHARACTER:
-            return (Expr *)parseCharacterNoCheck();
+            return parseCharacter();
         case TOKEN_STRING:
-            return (Expr *)parseStringNoCheck();
-        case TOKEN_POUND_LEFT_PAREN:
-            parserAdvance();
-            return (Expr *)parseVector();
+            return parseString();
         case TOKEN_POUND_U8_LEFT_PAREN:
-            parserAdvance();
-            return (Expr *)parseBytevector();
+            return parseBytevector();
 
-            // Quotation
-        case TOKEN_QUOTE:
-            // Read the quote
-            parserAdvance();
-            return (Expr *)parseQuotation();
-
-            // Identifiers
-        case TOKEN_IDENTIFIER:
-            return (Expr *)ALLOCATE_EXPR(ExprIdentifier, EXPR_IDENTIFIER,
-                                         CURRENT_LOCATION());
-
+        // Compound datums
         case TOKEN_LEFT_PAREN:
-            parserAdvance();
-            return parseListBasedExpression();
+            return parseList();
+        case TOKEN_POUND_LEFT_PAREN:
+            return parseVector();
+        case TOKEN_BACKQUOTE:
+        case TOKEN_COMMA:
+        case TOKEN_COMMA_AT:
+        case TOKEN_QUOTE:
+            return parseAbbreviation();
 
         case TOKEN_RIGHT_PAREN:
             errorAtCurrent("Unexpected right parenthesis.");
@@ -150,141 +125,64 @@ Expr *parseExpression(void) {
     return NULL;
 }
 
-static Expr *parseListBasedExpression(void) {
-    switch (CURRENT_TYPE()) {
-        case TOKEN_QUOTE:
-            parserAdvance();
-            return (Expr *)parseQuotation();
-        case TOKEN_IF:
-            parserAdvance();
-            return (Expr *)parseIf();
-        case TOKEN_SET:
-            parserAdvance();
-            return (Expr *)parseSet();
-        case TOKEN_LAMBDA:
-            parserAdvance();
-            return (Expr *)parseLambda();
-        case TOKEN_AND:
-        case TOKEN_OR:
-            parserAdvance();
-            return (Expr *)parseLogical();
-        case TOKEN_WHEN:
-        case TOKEN_UNLESS:
-            parserAdvance();
-            return (Expr *)parseWhenUnless();
-        case TOKEN_BEGIN:
-            parserAdvance();
-            return (Expr *)parseBegin();
-        default:
-            return (Expr *)parseCall();
-    }
-}
+static ObjSyntax *parseList(void) {
+    consume(TOKEN_LEFT_PAREN, "Expect '(' to open list.");
+    Token const listStart = parser.previous;
 
-static ExprIf *parseIf(void) {
-    ExprIf *conditional = ALLOCATE_EXPR(ExprIf, EXPR_IF, CURRENT_LOCATION());
-    conditional->test = parseExpression();
-    conditional->consequent = parseExpression();
-
-    conditional->alternate = NULL;
-
-    if (!parserMatch(TOKEN_RIGHT_PAREN)) {
-        conditional->alternate = parseExpression();
-        consume(TOKEN_RIGHT_PAREN, "Expect ')' to close 'if' expression");
-    }
-
-    return conditional;
-}
-
-static ExprSet *parseSet(void) {
-    ExprSet *assignment = ALLOCATE_EXPR(ExprSet, EXPR_SET, CURRENT_LOCATION());
-    assignment->target = parseIdentifier();
-    assignment->expression = parseExpression();
-    consume(TOKEN_RIGHT_PAREN, "Expect ')' to close 'set!' expression");
-    return assignment;
-}
-
-static ExprLambda *parseLambda(void) {
-    ExprLambda *lambda =
-        ALLOCATE_EXPR(ExprLambda, EXPR_LAMBDA, CURRENT_LOCATION());
-
-    initArgumentList(&(lambda->formals));
-    parseArgumentList(&(lambda->formals));
-
-    lambda->body = parseBody();
-
-    return lambda;
-}
-
-static void initArgumentList(ArgumentList *argList) {
-    argList->type = ARG_LIST_NORMAL;
-    initSmartArray(&(argList->identifiers), smartArrayCheckedRealloc,
-                   sizeof(ExprIdentifier *));
-}
-
-static void parseArgumentList(ArgumentList *argList) {
-    ExprIdentifier *id = NULL;
-    argList->type = ARG_LIST_NORMAL;
-
-    if (parserMatch(TOKEN_LEFT_PAREN)) {
-        while (!check(TOKEN_RIGHT_PAREN)) {
-            if (parserMatch(TOKEN_PERIOD)) {
-                argList->type = ARG_LIST_VARIADIC;
-            }
-            id = parseIdentifier();
-            smartArrayAppend(&(argList->identifiers), &id);
+    if (!canContinueList()) {
+        if (check(TOKEN_RIGHT_PAREN)) {
+            return makeSyntaxFromTokenToCurrent(NIL_VAL, &listStart);
+        } else {
+            errorAtCurrent("Expect parenthesis to close list.");
         }
-    } else {
-        argList->type = ARG_LIST_ONE_IDENTIFIER;
-        id = parseIdentifier();
-        smartArrayAppend(&(argList->identifiers), &id);
+    }
+
+    ObjSyntax *expr = parseExpression();
+    ObjPair *list = newPair(OBJ_VAL(expr), NIL_VAL);
+    while (canContinueList()) {
+        expr = parseExpression();
+        appendElement(list, OBJ_VAL(expr));
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expect right parenthesis to close list.");
+
+    return makeSyntaxFromTokenToCurrent(OBJ_VAL(list), &listStart);
+}
+
+static ObjSyntax *parseAbbreviation(void) {
+    ObjPair *abbreviation =
+        newPair(OBJ_VAL(abbreviationSymbol(CURRENT_TYPE())), NIL_VAL);
+    Token const abbreviationStart = parser.current;
+    parserAdvance();
+    Value datum = OBJ_VAL(parseExpression());
+    appendElement(abbreviation, datum);
+    return makeSyntaxFromTokenToCurrent(OBJ_VAL(abbreviation),
+                                        &abbreviationStart);
+}
+
+static ObjSymbol *abbreviationSymbol(TokenType abbreviationPrefix) {
+    switch (abbreviationPrefix) {
+        case TOKEN_QUOTE:
+            return newSymbol("quote", 5);
+        case TOKEN_COMMA:
+            return newSymbol("unquote", 7);
+        case TOKEN_COMMA_AT:
+            return newSymbol("unquote-splicing", 16);
+        case TOKEN_BACKQUOTE:
+            return newSymbol("quasiquote", 10);
+        default:
+            UNREACHABLE();
     }
 }
 
-static ExprBody *parseBody(void) {
-    ExprBody *body = ALLOCATE_EXPR(ExprBody, EXPR_BODY, CURRENT_LOCATION());
-
-    initExprPointerArray(&(body->definitions));
-
-    for (ExprDefinition *definition = tryToParseDefinition();
-         NULL != definition; definition = tryToParseDefinition()) {
-        appendToExprPointerArray(&(body->definitions), (Expr *)definition);
-    }
-
-    body->sequence = parseExpressionsUntilRightParen();
+static void appendToAST(ObjSyntaxPointerArray *ast, ObjSyntax *expr) {
+    smartArrayAppend(ast, &expr);
 }
-
-static inline void initExprPointerArray(ExprPointerArray *array) {
-    initSmartArray(array, smartArrayCheckedRealloc, sizeof(Expr *));
-}
-
-static void appendToExprPointerArray(ExprPointerArray *array, Expr *expr) {
-    smartArrayAppend(array, &expr);
-}
-
-static ExprIdentifier *parseIdentifier(void) {
-    if (!check(TOKEN_IDENTIFIER)) {
-        errorAtCurrent("Expect identifier");
-    }
-    return ALLOCATE_EXPR(ExprIdentifier, EXPR_IDENTIFIER, CURRENT_LOCATION());
-}
-
-static ExprCall *parseCall(void) {
-    ExprCall *call = ALLOCATE_EXPR(ExprCall, EXPR_CALL, CURRENT_LOCATION());
-    call->operator= parseExpression();
-    call->operands = parseUntilRightParen();
-    return call;
-}
-
-static ExprLiteral *parseQuotation(void) {
-    return makeLiteral(true, parseDatum());
-}
-
-static void appendToAST(AST *ast, Expr *expr) { smartArrayAppend(ast, &expr); }
 
 static void synchronize(void) {
     parser.panicMode = false;
 
-    while (!check(TOKEN_EOF)) {
+    while (!parserIsAtEnd()) {
         if (TOKEN_RIGHT_PAREN == tokenGetType(&(parser.previous))) return;
         if (check(TOKEN_LEFT_PAREN)) return;
         parserAdvance();

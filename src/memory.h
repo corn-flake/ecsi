@@ -7,6 +7,13 @@
 #include "common.h"
 #include "object.h"
 
+typedef struct {
+    bool isOn;
+    size_t bytesAllocated;
+    size_t nextGC;
+    SmartArray grayStack;
+} GarbageCollectorState;
+
 /*
   Allocate memory for count elements of type, using the Ecsi
   memory allocation system.
@@ -65,6 +72,12 @@ void markObject(Obj *object);
 
 // Mark value as accessible, and to be spared by the garbage collector.
 void markValue(Value value);
+
+// Turn off the garbage collector until turnOnGarbageCollector is called.
+void turnOffGarbageCollector(void);
+
+// Turn on the garbage collector until turnOffGarbageCollector is called.
+void turnOnGarbageCollector(void);
 
 // Run the garbage collector.
 void collectGarbage(void);

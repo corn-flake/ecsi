@@ -19,20 +19,13 @@
 #pragma once
 
 #include "../parser.h"
-#include "parser_operations.h"
 
-ExprLiteral *makeLiteral(bool isQuoted, Value value);
+ObjSyntax *parseSymbol(void);
 
-Value parseVectorUsing(ParseDatumFn parse);
-ExprLiteral *symbol(void);
+ObjSyntax *parseNumber(void);
+ObjSyntax *parseBoolean(void);
+ObjSyntax *parseCharacter(void);
+ObjSyntax *parseString(void);
 
-ExprLiteral *parseBytevector(void);
-ExprLiteral *parseNumber(void);
-ExprLiteral *parseBoolean(void);
-ExprLiteral *parseCharacter(void);
-ExprLiteral *parseString(void);
-ExprLiteral *parseNumberNoCheck(void);
-ExprLiteral *parseBooleanNoCheck(void);
-ExprLiteral *parseCharacterNoCheck(void);
-ExprLiteral *parseStringNoCheck(void);
-ExprLiteral *parseVector(void);
+ObjSyntax *parseVector(void);
+ObjSyntax *parseBytevector(void);

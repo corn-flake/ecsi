@@ -91,9 +91,7 @@ size_t getChunkCount(Chunk const *chunk);
 */
 void freeChunk(Chunk *chunk);
 
-/*
-  Adds value to chunk's constants array, and returns the index it was placed at.
- */
+// Adds value to chunk's constants array, and returns the index it was placed at.
 int addConstant(Chunk *chunk, Value value);
 
 /*

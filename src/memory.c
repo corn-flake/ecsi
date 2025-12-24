@@ -15,7 +15,7 @@
 
   You should have received a copy of the GNU General Public License along with
   Ecsi. If not, see <https://www.gnu.org/licenses/>.
- */
+*/
 
 #include "memory.h"
 
@@ -24,7 +24,6 @@
 #include "common.h"
 #include "compiler.h"
 #include "object.h"
-#include "parser.h"
 #include "smart_array.h"
 #include "table.h"
 #include "value.h"
@@ -63,6 +62,11 @@ void *checkedMalloc(size_t size) {
 }
 
 void *checkedRealloc(void *ptr, size_t newSize) {
+    if (0 == newSize) {
+        free(ptr);
+        return NULL;
+    }
+
     void *result = realloc(ptr, newSize);
     if (NULL == result) {
         DIE("Failed to grow memory at %p to %zu bytes.", ptr, newSize);
@@ -73,14 +77,14 @@ void *checkedRealloc(void *ptr, size_t newSize) {
 #define GC_HEAP_GROW_FACTOR 2
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
-    vm.bytesAllocated += newSize - oldSize;
+    vm.gcState.bytesAllocated += newSize - oldSize;
     if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
         collectGarbage();
 #endif
     }
 
-    if (vm.bytesAllocated > vm.nextGC) {
+    if (vm.gcState.bytesAllocated > vm.gcState.nextGC && newSize > oldSize) {
         collectGarbage();
     }
 
@@ -102,12 +106,7 @@ void markObject(Obj *object) {
     printf("\n");
 #endif
 
-    if (vm.grayCapacity < vm.grayCount + 1) {
-        vm.grayCapacity = GROW_CAPACITY(vm.grayCapacity);
-        vm.grayStack = (Obj **)checkedRealloc(vm.grayStack,
-                                              sizeof(Obj *) * vm.grayCapacity);
-    }
-    vm.grayStack[vm.grayCount++] = object;
+    smartArrayAppend(&(vm.gcState.grayStack), &object);
     object->isMarked = true;
 }
 
@@ -128,7 +127,7 @@ void freeObjects(void) {
         object = next;
     }
 
-    free(vm.grayStack);
+    freeSmartArray(&(vm.gcState.grayStack));
 }
 
 static void markArray(ValueArray *array) {
@@ -167,16 +166,20 @@ static void freeObject(Obj *object) {
             break;
         }
         case OBJ_SYMBOL: {
+            // We don't need to free the string because it's already in the
+            // VM's objects list and the GC will take care of it.
             FREE(ObjSymbol, object);
             break;
         }
+        case OBJ_SYNTAX:
+            FREE(ObjSyntax, object);
+            break;
         case OBJ_NATIVE:
             FREE(ObjNative, object);
             break;
-        case OBJ_UPVALUE: {
+        case OBJ_UPVALUE:
             FREE(ObjUpvalue, object);
             break;
-        }
         case OBJ_VECTOR: {
             // A vector doesn't own its elements.
             FREE(ObjVector, object);
@@ -232,11 +235,9 @@ static void blackenObject(Obj *object) {
             markValue(pair->cdr);
             break;
         }
-        case OBJ_VECTOR: {
-            ObjVector *vector = (ObjVector *)object;
-            markArray(&vector->array);
+        case OBJ_VECTOR:
+            markArray(&(((ObjVector *)object)->array));
             break;
-        }
         case OBJ_UPVALUE:
             markValue(((ObjUpvalue *)object)->closed);
             break;
@@ -246,6 +247,9 @@ static void blackenObject(Obj *object) {
             markValue(symbol->value);
             break;
         }
+        case OBJ_SYNTAX:
+            markValue(((ObjSyntax *)object)->value);
+            break;
         case OBJ_NATIVE:
         case OBJ_STRING:
             break;
@@ -253,8 +257,9 @@ static void blackenObject(Obj *object) {
 }
 
 static void traceReferences(void) {
-    while (vm.grayCount > 0) {
-        Obj *object = vm.grayStack[--vm.grayCount];
+    Obj *object = NULL;
+    while (!smartArrayIsEmpty(&(vm.gcState.grayStack))) {
+        smartArrayPopFromEnd(&(vm.gcState.grayStack), &object);
         blackenObject(object);
     }
 }
@@ -263,6 +268,9 @@ static void sweep(void) {
     Obj *previous = NULL;
     Obj *object = vm.objects;
     while (object != NULL) {
+#ifdef DEBUG_LOG_GC
+        printf("object is: %p\n", (void *)object);
+#endif
         if (object->isMarked) {
             object->isMarked = false;
             previous = object;
@@ -281,24 +289,43 @@ static void sweep(void) {
     }
 }
 
+void turnOffGarbageCollector(void) {
+#ifdef DEBUG_LOG_GC
+    puts("Garbage collector has been turned off.");
+#endif
+    vm.gcState.isOn = false;
+}
+
+void turnOnGarbageCollector(void) {
+#ifdef DEBUG_LOG_GC
+    puts("Garbage collector has been turned on.");
+#endif
+    vm.gcState.isOn = true;
+}
+
 void collectGarbage(void) {
 #ifdef DEBUG_LOG_GC
     printStack();
     printf("\n");
-    printf("-- gc begin\n");
-    size_t before = vm.bytesAllocated;
+    if (vm.gcState.isOn) {
+        printf("-- gc begin\n");
+    }
+    size_t before = vm.gcState.bytesAllocated;
 #endif
+
+    if (!vm.gcState.isOn) return;
 
     markRoots();
     traceReferences();
     tableRemoveWhite(&vm.strings);
     sweep();
 
-    vm.nextGC = vm.bytesAllocated * GC_HEAP_GROW_FACTOR;
+    vm.gcState.nextGC = vm.gcState.bytesAllocated * GC_HEAP_GROW_FACTOR;
 
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
     printf("    collected %zu bytes (from %zu to %zu) next at %zu\n",
-           before - vm.bytesAllocated, before, vm.bytesAllocated, vm.nextGC);
+           before - vm.gcState.bytesAllocated, before,
+           vm.gcState.bytesAllocated, vm.gcState.nextGC);
 #endif
 }

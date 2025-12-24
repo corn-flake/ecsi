@@ -188,11 +188,9 @@ static void mnemonicEscape(void) {
 }
 
 Token peculiarIdentifier(IdentifierVariant variant) {
-    // TODO: Verify that this function works.
-    if (IDENTIFIER_PECULIAR_STARTS_WITH_DOT == variant) dotSubsequent();
-
-    // The identifier is only one explicit sign, like '+'.
-    if (!isSignSubsequent(peek()) && '.' != peek()) {
+    if (IDENTIFIER_PECULIAR_STARTS_WITH_DOT == variant || match('.')) {
+        dotSubsequent();
+        subsequents();
         return makeToken(TOKEN_IDENTIFIER);
     }
 
@@ -200,16 +198,10 @@ Token peculiarIdentifier(IdentifierVariant variant) {
         // Read the sign subsequent.
         signSubsequent();
         subsequents();
-        return makeToken(TOKEN_IDENTIFIER);
     }
 
-    if ('.' == peek()) {
-        dotSubsequent();
-        subsequents();
-        return makeToken(TOKEN_IDENTIFIER);
-    }
-
-    UNREACHABLE();
+    // The identifier is only one explicit sign, like '+'.
+    return makeToken(TOKEN_IDENTIFIER);
 }
 
 static void signSubsequent(void) {

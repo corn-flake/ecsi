@@ -22,16 +22,16 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "object.h"
-
 // A slice of source code.
-typedef struct {
+typedef struct _SourceLocation {
     size_t line;    // The line the code is on.
     size_t length;  // The number of characters in the slice.
     // The address of the first character of the slice in the
     // source code string.
     char const *start;
 } SourceLocation;
+
+#include "object.h"
 
 // The type of a token.
 typedef enum {
@@ -98,6 +98,8 @@ size_t tokenGetLine(Token const *token);
 size_t tokenGetLength(Token const *token);
 char const *tokenGetStart(Token const *token);
 TokenType tokenGetType(Token const *token);
+
+bool tokenIsKeyword(Token const *token);
 
 bool textOfTokenEqualToString(Token const *token, char const *string);
 

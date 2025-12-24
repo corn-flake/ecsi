@@ -19,29 +19,34 @@
 #include "token_to_type.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 static char characterNameToChar(Token const *token);
 
 bool booleanTokenToBool(Token *token) {
-    if (textOfTokenEqualToString(token, "#t") || textOfTokenEqualToString(token, "#true")) {
+    if (textOfTokenEqualToString(token, "#t") ||
+        textOfTokenEqualToString(token, "#true")) {
         return true;
-    } else if (textOfTokenEqualToString(token, "#f") || textOfTokenEqualToString(token, "#false")) {
+    } else if (textOfTokenEqualToString(token, "#f") ||
+               textOfTokenEqualToString(token, "#false")) {
         return false;
     } else {
         // We crash the program if this happens because if it does, it's a
         // programmer error in the scanner.
-        DIE("Boolean token must have '#t', '#f', '#true' or '#false' as its start field.");
+        DIE("Boolean token must have '#t', '#f', '#true' or '#false' as its "
+            "start field.");
     }
 }
 
-double numberTokenToDouble(Token *token) { return strtod(tokenGetStart(token), NULL); }
+double numberTokenToDouble(Token *token) {
+    return strtod(tokenGetStart(token), NULL);
+}
 
 char characterTokenToChar(Token *token) {
     // All characters start with #\, so the start at 2 is the actual character.
-    return tokenGetLength(token) > 3 ? characterNameToChar(token) : tokenGetStart(token)[2];
+    return tokenGetLength(token) > 3 ? characterNameToChar(token)
+                                     : tokenGetStart(token)[2];
 }
 
 static char characterNameToChar(Token const *token) {
@@ -58,5 +63,5 @@ static char characterNameToChar(Token const *token) {
     // We crash the program if this happens because if it does, it's a
     // programmer error in the scanner.
     DIE("Character name must be either 'alarm', 'backspace', 'delete', "
-            "'escape', 'newline', 'null', 'return', 'space' or 'tab'.");
+        "'escape', 'newline', 'null', 'return', 'space' or 'tab'.");
 }

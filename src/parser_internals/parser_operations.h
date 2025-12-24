@@ -25,13 +25,11 @@
 #include "../value.h"
 #include "parser.h"
 
-typedef Value (*ParseDatumFn)(void);
-typedef Expr *(*ParseFn)(void);
+typedef ObjSyntax *(*ParseDatumFn)(void);
 
-Expr *allocateExpr(size_t size, ExprType type, SourceLocation location);
-
-#define ALLOCATE_EXPR(type, exprType, location) \
-    (type *)allocateExpr(sizeof(type), exprType, location)
+ObjSyntax *makeSyntaxAtCurrent(Value value);
+ObjSyntax *makeSyntaxAtPrevious(Value value);
+ObjSyntax *makeSyntaxFromTokenToCurrent(Value value, Token const *start);
 
 void formattedErrorAt(Token const *token, char const *format, ...);
 void varArgsFormattedErrorAt(Token const *token, char const *format,
@@ -52,20 +50,17 @@ bool checkToken(Token const *token);
 bool parserIsAtEnd(void);
 
 bool canContinueList(void);
-bool tokenMatchesString(Token *token, char *const string);
 bool previousTokenMatchesString(char *const string);
 bool currentTokenMatchesString(char *const string);
 
 #define CURRENT_LOCATION() (parser.current.location)
 #define CURRENT_LINE() (tokenGetLine(&(parser.current)))
 #define CURRENT_TYPE() (tokenGetType(&(parser.current)))
+#define CURRENT_LENGTH() (tokenGetLength(&(parser.current)))
+#define CURRENT_START() (tokenGetStart(&(parser.current)))
 
-Value parseListUsing(ParseDatumFn parse);
-// n == -1 indicates to parse until a right paren is found.
-Value parseNExprsIntoList(ParseDatumFn parse, int n);
-
-// n is unsigned because 'parse list of at least -1' makes no sense.
-Value parseAtLeastNExprsUsing(ParseDatumFn parse, size_t n);
-Value parseListOfExpressions(void);
-
-void parseExpressionsUntilRightParen(ExprPointerArray *array);
+#define PREVIOUS_LOCATION() (parser.previous.location)
+#define PREVIOUS_LINE() (tokenGetLine(&(parser.previous)))
+#define PREVIOUS_TYPE() (tokenGetType(&(parser.previous)))
+#define PREVIOUS_LENGTH() (tokenGetType(&(parser.previous)))
+#define PREVIOUS_START() (tokenGetStart(&(parser.previous)))
