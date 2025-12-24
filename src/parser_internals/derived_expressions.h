@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "../parser.h"
 #include "parser_operations.h"
 
 ParseDatumFn getDerivedExpressionParseFn(void);

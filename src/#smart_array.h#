@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stddef.h>
+#include "common.h"
 
 // A wrapper around checkedRealloc that can be used to initialize SmartArrays.
 void *smartArrayCheckedRealloc(void *ptr, size_t _oldSize, size_t newSize);
@@ -12,6 +12,21 @@ typedef struct {
     ReallocateFn reallocater;
     void *data;
 } SmartArray;
+
+#define DECLARE_SMART_ARRAY_OF(type, isGC) \
+    typedef SmartArray type##Array; \
+    #define init##type##Array(array) \
+   initSmartArray(array, isGC ? reallocate : smartArrayCheckedRealloc, sizeof(type))
+    #define get##type##Array##Count(array) getSmartArrayCount(array) \
+    #define get##type##Array##Capacity(array) getSmartArrayCapacity(array) \
+    #define get##type##Array##At(array, index) ((type const)SMART_ARRAY_AT(array, index)) \
+    #define set##type##Array##At(array, index, val) (SMART_ARRAY_AT(array, index) = val) \
+    #define type##Array##Append(array, val)
+        do { \
+            type arg = val; \
+            smartArrayAppend(array, &arg); \
+        } while (0)
+
 
 void initSmartArray(SmartArray *restrict smartArray, ReallocateFn reallocater,
                     size_t elementSize);

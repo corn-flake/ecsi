@@ -33,7 +33,6 @@
 #include "scanner.h"
 #include "smart_array.h"
 #include "value.h"
-#include "vm.h"
 
 Parser parser;
 
