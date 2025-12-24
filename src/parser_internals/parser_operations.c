@@ -115,21 +115,15 @@ void parserAdvance(void) {
 }
 
 void consume(TokenType type, char const *message) {
-    if (type == CURRENT_TYPE()) {
-        parserAdvance();
-        return;
-    }
-    errorAtCurrent(message);
+    if (!parserMatch(type)) errorAtCurrent(message);
 }
 
 bool check(TokenType type) { return type == CURRENT_TYPE(); }
 
 bool matchToken(Token const *token) {
-    if (checkToken(token)) {
-        parserAdvance();
-        return true;
-    }
-    return false;
+    if (!checkToken(token)) return false;
+    parserAdvance();
+    return true;
 }
 
 bool checkToken(Token const *token) {

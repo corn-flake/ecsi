@@ -28,8 +28,7 @@
 typedef SmartArray ObjSyntaxPointerArray;
 
 // Redefine all these macros
-#define EXPR_TYPE(expr) ((expr)->type)
-#define IS_IDENTIFIER(expr) (EXPR_IDENTIFIER == EXPR_TYPE(expr))
+#define IS_IDENTIFIER(expr) (true)
 #define IS_CALL(expr) (EXPR_CALL == EXPR_TYPE(expr))
 #define IS_LAMBDA(expr) (EXPR_LAMBDA == EXPR_TYPE(expr))
 #define IS_IF(expr) (EXPR_IF == EXPR_TYPE(expr))

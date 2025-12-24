@@ -1,0 +1,9 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/evan/Projects/c/ecsi",
+            "binaryPath": "/home/evan/Projects/c/ecsi/ecsi.out",
+            "binaryArgs": []
+        }
+    ]
+}
