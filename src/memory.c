@@ -74,6 +74,14 @@ void *checkedRealloc(void *ptr, size_t newSize) {
     return result;
 }
 
+char *checkedStrdup(char const *s) {
+    char *string = strdup(s);
+    if (NULL == string) {
+        DIE("Failed to duplicate \"%s\"", s);
+    }
+    return string;
+}
+
 #define GC_HEAP_GROW_FACTOR 2
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
@@ -241,17 +249,12 @@ static void blackenObject(Obj *object) {
         case OBJ_UPVALUE:
             markValue(((ObjUpvalue *)object)->closed);
             break;
-        case OBJ_SYMBOL: {
-            ObjSymbol *symbol = (ObjSymbol *)object;
-            markObject((Obj *)symbol->text);
-            markValue(symbol->value);
-            break;
-        }
         case OBJ_SYNTAX:
             markValue(((ObjSyntax *)object)->value);
             break;
         case OBJ_NATIVE:
         case OBJ_STRING:
+        case OBJ_SYMBOL:
             break;
     }
 }

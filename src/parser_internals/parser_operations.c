@@ -86,17 +86,19 @@ void varArgsFormattedErrorAt(Token const *token, char const *format,
     if (parser.panicMode) return;
     parser.panicMode = true;
     fprintf(stderr, "[line %zu] Error", tokenGetLine(token));
+
     if (TOKEN_EOF == tokenGetType(token)) {
         fprintf(stderr, " at end");
     } else if (TOKEN_ERROR == tokenGetType(token)) {
         /*
           We don't do anything if the token is an error because if it is,
-          the token's error message will be passed as the MESSAGE
+          the token's error message will be passed as the message
          */
     } else {
         fprintf(stderr, " at '%.*s'", (int)tokenGetLength(token),
                 tokenGetStart(token));
     }
+
     fprintf(stderr, ": ");
     vfprintf(stderr, format, args);
     fputs("\n", stderr);

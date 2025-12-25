@@ -42,12 +42,6 @@ static size_t numberOfDigitsInLong(long l);
 // Convert a fractional value into an integer value with the same digits.
 static long fractionToWholeNumber(double fraction);
 
-/*
-  Duplicate S as a heap-allocated string, and die with an appropriate message if
-  allocation fails.
-*/
-static char *checkedStrdup(char const *s);
-
 bool valuesEqual(Value a, Value b) {
 #ifdef NAN_BOXING
     if (IS_NUMBER(a) && IS_NUMBER(b)) {
@@ -159,14 +153,6 @@ static size_t numberOfDigitsInLong(long l) { return (size_t)ceil(log10(l)); }
 
 static char *booleanToString(bool b) {
     return checkedStrdup(b ? "#true" : "#false");
-}
-
-static char *checkedStrdup(char const *s) {
-    char *string = strdup(s);
-    if (NULL == string) {
-        DIE("Failed to duplicate \"%s\"", s);
-    }
-    return string;
 }
 
 void printValue(Value value) {

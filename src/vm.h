@@ -46,7 +46,7 @@ typedef struct {
 
     Table globals;
     Table strings;
-    ObjString *initString;
+    ObjSymbol *initString;
     ObjUpvalue *openUpvalues;
 
     GarbageCollectorState gcState;

@@ -71,7 +71,7 @@ void initVM(void) {
       value in vm.initString before it was initialized.
      */
     vm.initString = NULL;
-    vm.initString = copyString("init", 4);
+    vm.initString = newSymbol("init", 4);
 
     defineNative("clock", clockNative);
 }
@@ -115,10 +115,10 @@ static void resetStack(void) {
 }
 
 static void defineNative(char const *name, NativeFn function) {
-    ObjString *nameString = copyString(name, (int)strlen(name));
-    push(OBJ_VAL(nameString));
+    ObjSymbol *nameSymbol = newSymbol(name, (int)strlen(name));
+    push(OBJ_VAL(nameSymbol));
     push(OBJ_VAL(newNative(function)));
-    tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+    tableSet(&vm.globals, AS_SYMBOL(vm.stack[0]), vm.stack[1]);
     pop();
     pop();
 }
@@ -181,7 +181,7 @@ static InterpretResult run(void) {
 #define READ_CONSTANT() \
     (getValueArrayAt(&(frame->closure->function->chunk.constants), READ_BYTE()))
 
-#define READ_STRING() AS_STRING(READ_CONSTANT())
+#define READ_SYMBOL() AS_SYMBOL(READ_CONSTANT())
 #define BINARY_OP(valueType, op)                          \
     do {                                                  \
         if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -243,7 +243,7 @@ static InterpretResult run(void) {
                 break;
             }
             case OP_GET_GLOBAL: {
-                ObjString *name = READ_STRING();
+                ObjSymbol *name = READ_SYMBOL();
                 Value value;
                 if (!tableGet(&vm.globals, name, &value)) {
                     runtimeError("Undefined variable '%s'.", name->chars);
@@ -253,13 +253,13 @@ static InterpretResult run(void) {
                 break;
             }
             case OP_DEFINE_GLOBAL: {
-                ObjString *name = READ_STRING();
+                ObjSymbol *name = READ_SYMBOL();
                 tableSet(&vm.globals, name, peek(0));
                 pop();
                 break;
             }
             case OP_SET_GLOBAL: {
-                ObjString *name = READ_STRING();
+                ObjSymbol *name = READ_SYMBOL();
                 if (tableSet(&vm.globals, name, peek(0))) {
                     tableDelete(&vm.globals, name);
                     runtimeError("Undefined variable '%s'.", name->chars);

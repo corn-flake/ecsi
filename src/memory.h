@@ -61,6 +61,12 @@ void *checkedMalloc(size_t size);
 void *checkedRealloc(void *ptr, size_t newSize);
 
 /*
+  Duplicate S as a heap-allocated string, and die with an appropriate message if
+  allocation fails. Memory is not tracked by the garbage collector.
+ */
+char *checkedStrdup(char const *s);
+
+/*
   Resizes the memory at pointer from oldSize, to newSize. The memory
   it allocates is tracked by the garbage collector.
  */

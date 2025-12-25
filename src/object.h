@@ -21,8 +21,7 @@
 
 #include <stdint.h>
 
-struct ObjSymbol;
-typedef struct ObjSymbol ObjSymbol;
+typedef struct ObjString ObjSymbol;
 
 #include "chunk.h"
 #include "scanner.h"
@@ -127,6 +126,13 @@ struct ObjString {
     uint32_t hash;  // The hash of the string, calculated with hashString.
 };
 
+// A real Scheme string which has a fixed length
+typedef struct {
+    Obj obj;
+    size_t length;  // Length of the string
+    char *chars;    // Null terminated data
+} ObjFixedString;
+
 typedef struct {
     Obj obj;
     Value value;
@@ -178,11 +184,12 @@ typedef struct {
     ValueArray array;
 } ObjVector;
 
+/*
 struct ObjSymbol {
     Obj obj;
     ObjString *text;
-    Value value;
 };
+*/
 
 /*
   Determine whether value is an object of type type.

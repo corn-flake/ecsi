@@ -79,29 +79,16 @@ static void growableStringAppendString(GrowableString *gs, const char *s) {
 }
 
 const char *objTypeToString(ObjType type) {
-    switch (type) {
-        case OBJ_CLOSURE:
-            return "OBJ_CLOSURE";
-        case OBJ_STRING:
-            return "OBJ_STRING";
-        case OBJ_NATIVE:
-            return "OBJ_NATIVE";
-        case OBJ_FUNCTION:
-            return "OBJ_FUNCTION";
-        case OBJ_UPVALUE:
-            return "OBJ_UPVALUE";
-        case OBJ_SYMBOL:
-            return "OBJ_SYMBOL";
-        case OBJ_SYNTAX:
-            return "OBJ_SYNTAX";
-        case OBJ_PAIR:
-            return "OBJ_PAIR";
-        case OBJ_VECTOR:
-            return "OBJ_VECTOR";
-        default:
-            printf("Unknown object type: %d\n", type);
-            UNREACHABLE();
-    }
+    assert(type <= OBJ_VECTOR);
+
+    static char const *names[] = {
+        [OBJ_CLOSURE] = "OBJ_CLOSURE", [OBJ_FUNCTION] = "OBJ_FUNCTION",
+        [OBJ_PAIR] = "OBJ_PAIR",       [OBJ_STRING] = "OBJ_STRING",
+        [OBJ_SYMBOL] = "OBJ_SYMBOL",   [OBJ_SYNTAX] = "OBJ_SYNTAX",
+        [OBJ_NATIVE] = "OBJ_NATIVE",   [OBJ_UPVALUE] = "OBJ_UPVALUE",
+        [OBJ_VECTOR] = "OBJ_VECTOR"};
+
+    return names[type];
 }
 
 char *objectToString(Value value) {
@@ -118,23 +105,15 @@ char *objectToString(Value value) {
             return objSymbolToString(AS_SYMBOL(value));
             // We heap-allocate OBJ_NATIVE and OBJ_UPVALUE because other
             // functions expect them to be heap-allocated.
-        case OBJ_NATIVE: {
-            size_t const NATIVE_FN_LEN = 11;
-            char *nativeFnString = checkedMalloc(NATIVE_FN_LEN + 1);
-            memcpy(nativeFnString, "<native fn>", NATIVE_FN_LEN + 1);
-            return nativeFnString;
-        }
-        case OBJ_UPVALUE: {
-            size_t const UPVALUE_LEN = 7;
-            char *upvalueString = checkedMalloc(UPVALUE_LEN + 1);
-            memcpy(upvalueString, "upvalue", UPVALUE_LEN + 1);
-            return upvalueString;
-        }
+        case OBJ_NATIVE:
+            return checkedStrdup("<native fn>");
+        case OBJ_UPVALUE:
+            return checkedStrdup("upvalue");
         case OBJ_VECTOR:
             return objVectorToString(AS_VECTOR(value));
         default:
             // Unreached
-            return NULL;
+            UNREACHABLE();
     }
 }
 
@@ -233,28 +212,19 @@ static char *objClosureToString(ObjClosure const *closure) {
 
 static char *objFunctionToString(ObjFunction const *function) {
     if (NULL == function->name) {
-        size_t scriptStringLength = 7;
-        char *scriptString = checkedMalloc(scriptStringLength + 1);
-        memcpy(scriptString, "script", scriptStringLength);
-        scriptString[scriptStringLength] = '\0';
-        return scriptString;
+        return checkedStrdup("script");
     }
 
-    size_t bufferSize = function->name->length + 3;  // <fn > + null
+    size_t bufferSize = function->name->length + 6;  // <fn > + null
     char *buffer = checkedMalloc(bufferSize);
-    memcpy(buffer, "<fn", 3);
-    memcpy(buffer + 3, function->name->chars, function->name->length);
-    buffer[function->name->length + 3] = '>';
-    buffer[bufferSize - 1] = '\0';
+    snprintf(buffer, bufferSize, "<fn %s>", function->name->chars);
     return buffer;
 }
 
 static char *objSymbolToString(ObjSymbol const *symbol) {
-    size_t bufferSize = symbol->text->length + 2;  // single quote + null
-    char *buffer = ALLOCATE(char, bufferSize);
-    buffer[0] = '\'';
-    memcpy(buffer + 1, symbol->text->chars, symbol->text->length);
-    buffer[bufferSize - 1] = '\0';
+    size_t bufferSize = symbol->length + 2;  // single quote + null
+    char *buffer = checkedMalloc(bufferSize);
+    snprintf(buffer, bufferSize, "'%s", symbol->chars);
     return buffer;
 }
 
@@ -357,7 +327,7 @@ ObjString *takeString(char *chars, int length) {
     uint32_t hash = hashString(chars, length);
     ObjString *interned = tableFindString(&vm.strings, chars, length, hash);
 
-    if (interned != NULL) {
+    if (NULL != interned) {
         FREE_ARRAY(char, chars, length + 1);
         return interned;
     }
@@ -368,7 +338,7 @@ ObjString *takeString(char *chars, int length) {
 ObjString *copyString(char const *chars, int length) {
     uint32_t hash = hashString(chars, length);
     ObjString *interned = tableFindString(&vm.strings, chars, length, hash);
-    if (interned != NULL) return interned;
+    if (NULL != interned) return interned;
 
     char *heapChars = ALLOCATE(char, length + 1);
     memcpy(heapChars, chars, length);
@@ -395,13 +365,7 @@ ObjUpvalue *newUpvalue(Value *slot) {
 }
 
 ObjSymbol *newSymbol(char const *chars, int length) {
-    ObjString *string = copyString(chars, length);
-    push(OBJ_VAL(string));
-    ObjSymbol *symbol = ALLOCATE_OBJ(ObjSymbol, OBJ_SYMBOL);
-    symbol->text = string;
-    symbol->value = NIL_VAL;
-    pop();  // string
-    return symbol;
+    return copyString(chars, length);
 }
 
 ObjSyntax *newSyntax(Value value, SourceLocation location) {
@@ -422,10 +386,8 @@ void printObject(Value value) {
             printFunction(AS_FUNCTION(value));
             break;
         case OBJ_STRING:
-            printf("\"%s\"", AS_CSTRING(value));
-            break;
         case OBJ_SYMBOL:
-            printf("'%s", AS_CSTRING(OBJ_VAL(AS_SYMBOL(value)->text)));
+            printf("\"%s\"", AS_CSTRING(value));
             break;
         case OBJ_SYNTAX:
             printValue(AS_SYNTAX(value)->value);
@@ -551,7 +513,7 @@ ObjPair *finalPair(ObjPair *list) {
 }
 
 bool textOfSymbolEqualToString(ObjSymbol const *symbol, const char *string) {
-    return objStringEqualToString(symbol->text, string);
+    return objStringEqualToString(symbol, string);
 }
 
 static bool objStringEqualToString(ObjString const *string, char const *chars) {
