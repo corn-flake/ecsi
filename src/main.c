@@ -51,7 +51,6 @@ static void showWarranty(void);
 static void showCopying(void);
 
 int main(int argc, char const *argv[]) {
-    showStartupCopyingNotice();
     initVM();
 
     if (1 == argc) {
@@ -69,8 +68,9 @@ int main(int argc, char const *argv[]) {
 }
 
 static void repl(void) {
+    showStartupCopyingNotice();
     char *line = readline("> ");
-    while (line != NULL) {
+    while (NULL != line) {
         // Only add non-empty lines to the history
         if (*line) {
             add_history(line);

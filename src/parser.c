@@ -38,8 +38,7 @@ Parser parser;
 static void synchronize(void);
 
 static ObjSyntax *parseList(void);
-static ObjSyntax *parseAbbreviation(void);
-static ObjSymbol *abbreviationSymbol(TokenType abbreviationPrefix);
+static ObjSyntax *parseAbbreviation(ObjSymbol *abbreviationPrefix);
 
 static inline void initAST(ObjSyntaxPointerArray *ast);
 static void appendToAST(ObjSyntaxPointerArray *ast, ObjSyntax *expr);
@@ -106,10 +105,13 @@ ObjSyntax *parseExpression(void) {
         case TOKEN_POUND_LEFT_PAREN:
             return parseVector();
         case TOKEN_BACKQUOTE:
+            return parseAbbreviation(newSymbol("quasiquote", 10));
         case TOKEN_COMMA:
+            return parseAbbreviation(newSymbol("unquote", 7));
         case TOKEN_COMMA_AT:
+            return parseAbbreviation(newSymbol("unquote-splicing", 16));
         case TOKEN_QUOTE:
-            return parseAbbreviation();
+            return parseAbbreviation(newSymbol("quote", 5));
 
         case TOKEN_RIGHT_PAREN:
             errorAtCurrent("Unexpected right parenthesis.");
@@ -130,7 +132,7 @@ static ObjSyntax *parseList(void) {
     Token const listStart = parser.previous;
 
     if (!canContinueList()) {
-        if (check(TOKEN_RIGHT_PAREN)) {
+        if (parserMatch(TOKEN_RIGHT_PAREN)) {
             return makeSyntaxFromTokenToCurrent(NIL_VAL, &listStart);
         } else {
             errorAtCurrent("Expect parenthesis to close list.");
@@ -149,30 +151,14 @@ static ObjSyntax *parseList(void) {
     return makeSyntaxFromTokenToCurrent(OBJ_VAL(list), &listStart);
 }
 
-static ObjSyntax *parseAbbreviation(void) {
-    ObjPair *abbreviation =
-        newPair(OBJ_VAL(abbreviationSymbol(CURRENT_TYPE())), NIL_VAL);
+static ObjSyntax *parseAbbreviation(ObjSymbol *abbreviationPrefix) {
+    ObjPair *abbreviation = newPair(OBJ_VAL(abbreviationPrefix), NIL_VAL);
     Token const abbreviationStart = parser.current;
     parserAdvance();
     Value datum = OBJ_VAL(parseExpression());
     appendElement(abbreviation, datum);
     return makeSyntaxFromTokenToCurrent(OBJ_VAL(abbreviation),
                                         &abbreviationStart);
-}
-
-static ObjSymbol *abbreviationSymbol(TokenType abbreviationPrefix) {
-    switch (abbreviationPrefix) {
-        case TOKEN_QUOTE:
-            return newSymbol("quote", 5);
-        case TOKEN_COMMA:
-            return newSymbol("unquote", 7);
-        case TOKEN_COMMA_AT:
-            return newSymbol("unquote-splicing", 16);
-        case TOKEN_BACKQUOTE:
-            return newSymbol("quasiquote", 10);
-        default:
-            UNREACHABLE();
-    }
 }
 
 static void appendToAST(ObjSyntaxPointerArray *ast, ObjSyntax *expr) {
