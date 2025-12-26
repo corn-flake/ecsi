@@ -26,7 +26,7 @@
 #include "object.h"
 #include "value.h"
 
-static Entry *findEntry(Entry *entries, int capacity, ObjString *key);
+static Entry *findEntry(Entry *entries, int capacity, ObjSymbol *key);
 static void adjustCapacity(Table *table, int capacity);
 
 void initTable(Table *table) {
@@ -40,7 +40,7 @@ void freeTable(Table *table) {
     initTable(table);
 }
 
-static Entry *findEntry(Entry *entries, int capacity, ObjString *key) {
+static Entry *findEntry(Entry *entries, int capacity, ObjSymbol *key) {
     uint32_t index = key->hash & (capacity - 1);
     Entry *tombstone = NULL;
 
@@ -87,7 +87,7 @@ static void adjustCapacity(Table *table, int capacity) {
     table->capacity = capacity;
 }
 
-bool tableGet(Table *table, ObjString *key, Value *value) {
+bool tableGet(Table *table, ObjSymbol *key, Value *value) {
     if (0 == table->count) return false;
 
     Entry *entry = findEntry(table->entries, table->capacity, key);
@@ -97,7 +97,7 @@ bool tableGet(Table *table, ObjString *key, Value *value) {
     return true;
 }
 
-bool tableSet(Table *table, ObjString *key, Value value) {
+bool tableSet(Table *table, ObjSymbol *key, Value value) {
     if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
         int capacity = GROW_CAPACITY(table->capacity);
         adjustCapacity(table, capacity);
@@ -111,7 +111,7 @@ bool tableSet(Table *table, ObjString *key, Value value) {
     return isNewKey;
 }
 
-bool tableDelete(Table *table, ObjString *key) {
+bool tableDelete(Table *table, ObjSymbol *key) {
     if (0 == table->count) return false;
 
     // Find the entry.
@@ -133,7 +133,7 @@ void tableAddAll(Table *from, Table *to) {
     }
 }
 
-ObjString *tableFindString(Table *table, char const *chars, int length,
+ObjSymbol *tableFindString(Table *table, char const *chars, int length,
                            uint32_t hash) {
     if (0 == table->count) return NULL;
 

@@ -32,7 +32,7 @@ static ObjSyntax *parseVectorUsing(ParseDatumFn parse);
 
 ObjSyntax *parseSymbol(void) {
     assert(tokenIsKeyword(&(parser.current)) || check(TOKEN_IDENTIFIER));
-    Value sym = OBJ_VAL(tokenToObjString(&(parser.current)));
+    Value sym = OBJ_VAL(tokenToObjSymbol(&(parser.current)));
     parserAdvance();
     return makeSyntaxAtPrevious(sym);
 }

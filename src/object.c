@@ -56,7 +56,7 @@ static char *objSymbolToString(ObjSymbol const *symbol);
 static char *objVectorToString(ObjVector const *vector);
 
 static Obj *allocateObject(size_t size, ObjType type);
-static ObjString *allocateString(char *chars, int length, uint32_t hash);
+static ObjString *allocateString(char *chars, size_t length);
 static uint32_t hashString(char const *key, int length);
 static void printFunction(ObjFunction const *function);
 static bool isList(ObjPair *pair);
@@ -301,7 +301,7 @@ ObjNative *newNative(NativeFn function) {
     return native;
 }
 
-static ObjString *allocateString(char *chars, int length, uint32_t hash) {
+static ObjString *allocateString(char *chars, size_t length) {
     ObjString *string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
     string->length = length;
     string->chars = chars;
@@ -386,8 +386,10 @@ void printObject(Value value) {
             printFunction(AS_FUNCTION(value));
             break;
         case OBJ_STRING:
-        case OBJ_SYMBOL:
             printf("\"%s\"", AS_CSTRING(value));
+            break;
+        case OBJ_SYMBOL:
+            printf("\"%s\"", AS_SYMBOL(value)->chars);
             break;
         case OBJ_SYNTAX:
             printValue(AS_SYNTAX(value)->value);

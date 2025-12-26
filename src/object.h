@@ -114,15 +114,13 @@ struct Obj {
     struct Obj *next;  // Next object in VM's objects list.
 };
 
-// A Scheme string.
-struct ObjString {
+// A Scheme symbol.
+struct ObjSymbol {
     Obj obj;      // Metadata
-    int length;   // Length of the string
-    char *chars;  // Null terminated string data
+    int length;   // Length of the text
+    char *chars;  // Null terminated text string
 
-    // We store the string's hash because strings in Ecsi are
-    // immutable and it improves performance to not re-hash the string
-    // every time we look for a key in the hash table
+    // We store the symbols's hash because symbols are interned.
     uint32_t hash;  // The hash of the string, calculated with hashString.
 };
 
@@ -152,7 +150,7 @@ typedef struct {
     int arity;  // Number of arguments
     int upvalueCount;
     Chunk chunk;      // Function code
-    ObjString *name;  // Function name
+    ObjSymbol *name;  // Function name
 } ObjFunction;
 
 // A Scheme closure.

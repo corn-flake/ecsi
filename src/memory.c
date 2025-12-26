@@ -167,16 +167,11 @@ static void freeObject(Obj *object) {
             FREE(ObjPair, object);
             break;
         }
-        case OBJ_STRING: {
+        case OBJ_STRING:
+        case OBJ_SYMBOL: {
             ObjString *string = (ObjString *)object;
             FREE_ARRAY(char, string->chars, string->length + 1);
             FREE(ObjString, object);
-            break;
-        }
-        case OBJ_SYMBOL: {
-            // We don't need to free the string because it's already in the
-            // VM's objects list and the GC will take care of it.
-            FREE(ObjSymbol, object);
             break;
         }
         case OBJ_SYNTAX:

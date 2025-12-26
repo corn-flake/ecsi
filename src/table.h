@@ -20,17 +20,18 @@
 #pragma once
 
 #include "common.h"
+#include "object.h"
 #include "value.h"
 
 #define TABLE_MAX_LOAD 0.75
 
 // An entry in a hash table.
 typedef struct {
-    ObjString *key;  // Key
+    ObjSymbol *key;  // Key
     Value value;     // Value
 } Entry;
 
-// A hash table mapping ObjStrings to Values.
+// A hash table mapping ObjSymbols to Values.
 typedef struct {
     int count;
     int capacity;
@@ -39,11 +40,11 @@ typedef struct {
 
 void initTable(Table *table);
 void freeTable(Table *table);
-bool tableGet(Table *table, ObjString *key, Value *value);
-bool tableSet(Table *table, ObjString *key, Value value);
-bool tableDelete(Table *table, ObjString *key);
+bool tableGet(Table *table, ObjSymbol *key, Value *value);
+bool tableSet(Table *table, ObjSymbol *key, Value value);
+bool tableDelete(Table *table, ObjSymbol *key);
 void tableAddAll(Table *from, Table *to);
-ObjString *tableFindString(Table *table, char const *chars, int length,
+ObjSymbol *tableFindString(Table *table, char const *chars, int length,
                            uint32_t hash);
 void tableRemoveWhite(Table *table);
 void markTable(Table *table);
